@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <!-- titolo default è PPAT (Perspective Point Annotation Tool) -->
+    <title>{% block title %}Perspective Point Annotation Tool{% endblock %}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='main_style.css') }}">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <!-- header comune -->
+    <header>
+        <h1>Perspective Point Annotation Tool</h1>
+        <div>
+            <a>PPAT</a>
+            <a href="{{ url_for('index') }}">Index</a>
+            <a href="{{ url_for('guide') }}">Guide</a>
+            <a href="{{ url_for('task') }}">Task</a>
+        </div>
+    </header>
+
+    <hr>
+
+    <!-- contenuto specifico delle pagine -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <hr>
+
+    <!-- footer comune -->
+    <footer>
+        <p>Made by Giovanni Spinelli</p>
+    </footer>
+
+    <!-- JS comune -->
+    <script src="{{ url_for('static', filename='main_script.js') }}"></script>
+
+    <!-- JS specifici -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
