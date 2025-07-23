@@ -2,10 +2,13 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <!-- titolo default è PPAT (Perspective Point Annotation Tool) -->
+    <!-- default title is PPAT (Perspective Point Annotation Tool) -->
     <title>{% block title %}Perspective Point Annotation Tool{% endblock %}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- to avoid favicon.ico errore -->
+    <link rel="icon" href="data:,">
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='main_style.css') }}">
@@ -27,22 +30,22 @@
 
     <hr>
 
-    <!-- contenuto specifico delle pagine -->
+    <!-- specific content-->
     <main>
         {% block content %}{% endblock %}
     </main>
 
     <hr>
 
-    <!-- footer comune -->
+    <!-- common footer -->
     <footer>
-        <p>Made by Giovanni Spinelli</p>
+        <p>Made by GiovaSpine</p>
     </footer>
 
-    <!-- JS comune -->
+    <!-- common JS -->
     <script src="{{ url_for('static', filename='main_script.js') }}"></script>
 
-    <!-- JS specifici -->
+    <!-- specific JS -->
     {% block scripts %}{% endblock %}
 </body>
 </html>

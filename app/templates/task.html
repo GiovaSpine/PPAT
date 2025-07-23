@@ -29,7 +29,13 @@
         <button type="submit">Delete Task</button>
     </form>
 
-    <canvas id="main_canvas" name="main_canvas"></canvas>
+    <div class="controls">
+        <button onclick="prev_image()">⬅</button>
+        <span id="counter">1 / {{ nimages }}</span>
+        <button onclick="next_image()">➡</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
     
 {% endif %}
 

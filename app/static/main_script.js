@@ -1,1 +1,1 @@
-console.log("Test")
+console.log("Testing main_script.js")

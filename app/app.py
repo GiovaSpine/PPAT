@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, abort
 import os
-import shutil
-from werkzeug.utils import secure_filename
+import shutil  # to delete folders
+from werkzeug.utils import secure_filename  # to check filenames
 import json
 
 
@@ -30,10 +30,13 @@ def task():
         if not os.path.exists(task_directory):
             os.makedirs(task_directory)
 
-        # saves the number of points and images in data.txt in the Task folder
-        with open(os.path.join(task_directory, 'data.txt'), 'w') as f:
-            f.write(f"npoints: {npunti}\n")
-            f.write(f"nimages: {len(immagini)}\n")
+        # saves the number of points and images in data.json in the Task folder
+        data = {
+            "npoints": int(npunti),
+            "nimages": len(immagini)
+        }
+        with open(os.path.join(task_directory, 'data.json'), 'w') as f:
+            json.dump(data, f, indent=4)
 
         # creates the Images folder inside Task folder
         images_directory = os.path.join(task_directory, 'Images')
@@ -57,14 +60,34 @@ def task():
         # based on the existance of the Task folder Task.html has 2 different behaviours
         # it can allow to create a task (if the Task folder doesn't exist)
         # or it can allow to work on the task (if the Task folder exists)
+
         task_created = os.path.exists(task_directory)
-        return render_template('task.html', task_created=task_created)
+
+        if task_created:
+            with open(os.path.join(task_directory, 'data.json'), 'r') as f:
+                data = json.load(f)
+            nimages = int(data.get('nimages'))
+        else:
+            nimages = 0
+
+        return render_template('task.html', task_created=task_created, nimages=nimages)
 
 @app.route('/delete-task')
 def delete_task():
     if os.path.exists(task_directory):
         shutil.rmtree(task_directory)
     return redirect(url_for('task'))
+
+
+@app.route('/task/<path:filename>')
+def serve_task_file(filename):
+    task_folder = os.path.join(app.root_path, 'Task')
+    file_path = os.path.join(task_folder, filename)
+
+    if not os.path.isfile(file_path):
+        abort(404)
+
+    return send_from_directory(task_folder, filename)
 
 # =============================================================================
 
