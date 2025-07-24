@@ -1,7 +1,7 @@
 console.log("Testing task_script.js");
 
 
-const counter = document.getElementById("counter");
+const counter = document.getElementById("counter");  // the counter element that shows 1/34, for example
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -17,14 +17,9 @@ const images_directory = task_directory + 'Images/';
 
 let index = 0;
 
-let cursur_x = 0;
-let cursur_y = 0;
-let zoom = 100;
-
+let image = null;
 let image_x = 0;
 let image_y = 0;
-let image_width = 0;
-let image_height = 0;
 let image_scale = 1.0;
 
 class Point {
@@ -69,17 +64,24 @@ async function fetch_image_list() {
   return null;
 }
 async function fetch_image(index) {
-  if(index >= 0 && index < nimages){
+  if (index >= 0 && index < nimages) {
     const response = await fetch(images_directory + image_list[index]);
     if (!response.ok) {
-      throw new Error("Error during image fetch");
+      throw new Error("Errore durante il fetch dell'immagine");
     }
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
-    console.log("image: ", url);
-    return url;
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve(img); // risolviamo solo quando l'immagine è completamente pronta
+        URL.revokeObjectURL(url);  // forse c'è da sposrtarlo
+      };
+      img.src = url;
+    });
   } else {
-    console.log("Not valid index in fetch_image");
+    console.log("Indice non valido in fetch_image V2");
     return null;
   }
 }
@@ -89,8 +91,12 @@ async function main() {
   try {
     await fetch_data();
     await fetch_image_list();
+    image = await fetch_image(index);
 
-    draw_initial_image_on_canvas(index);
+    // at this point you have the image
+    initial_position_and_scale();
+
+    draw();
 
   } catch (error) {
     console.error("Error during loading of certain datas:", error);
@@ -100,115 +106,215 @@ async function main() {
 main();
 
 
-
-async function draw_initial_image_on_canvas(index) {
-  const url = await fetch_image(index);
-  if (url == null) return;
-
-  const image = new Image();
-  image.onload = function () {
-
-    if(image.width > canvas.width || image.height > canvas.height){
-      // we need to scale down the image
-
-      image_scale_width = canvas.width / image.width;
-      image_scale_height = canvas.height / image.height;
-      
-      image_scale = Math.min(image_scale_width, image_scale_height);
-      
-      image_x = (canvas.width / 2) - ((image.width * image_scale) / 2);
-      image_y = (canvas.height / 2) - ((image.height * image_scale) / 2);
-      
-      image_width = image.width * image_scale;
-      image_height = image.height * image_scale;
-
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(image, image_x, image_y, image_width, image_height);
-      URL.revokeObjectURL(url); // free the memory
-    } else {
-
-      image_x = (canvas.width / 2) - (image.width / 2);
-      image_y = (canvas.height / 2) - (image.height / 2);
-
-      image_width = image.width;
-      image_height = image.height;
-
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(image, image_x, image_y)
-      URL.revokeObjectURL(url); // free the memory
-    }
+function initial_position_and_scale(){
+  // determines the initial position and scale of the image
+  if(image.width > canvas.width || image.height > canvas.height){
+    // we need to scale down the image
+    image_scale_width = canvas.width / image.width;
+    image_scale_height = canvas.height / image.height;
     
-  };
-  image.src = url;
+    image_scale = Math.min(image_scale_width, image_scale_height);
+    
+    image_x = (canvas.width / 2) - ((image.width * image_scale) / 2);
+    image_y = (canvas.height / 2) - ((image.height * image_scale) / 2);
+  } else {
+
+    image_scale = 1.0;
+
+    image_x = (canvas.width / 2) - (image.width / 2);
+    image_y = (canvas.height / 2) - (image.height / 2);
+  }
 }
 
-function next_image() {
+
+async function draw_initial_image_on_canvas(image, xi, yi) {
+
+  if(image.width > canvas.width || image.height > canvas.height){
+    // we need to scale down the image
+
+    image_scale_width = canvas.width / image.width;
+    image_scale_height = canvas.height / image.height;
+    
+    image_scale = Math.min(image_scale_width, image_scale_height);
+    
+    image_x = (canvas.width / 2) - ((image.width * image_scale) / 2) + xi;
+    image_y = (canvas.height / 2) - ((image.height * image_scale) / 2) + yi;
+    
+    image_width = image.width * image_scale;
+    image_height = image.height * image_scale;
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, image_x, image_y, image_width, image_height);
+  } else {
+
+    image_x = (canvas.width / 2) - (image.width / 2) + xi;
+    image_y = (canvas.height / 2) - (image.height / 2) + yi;
+
+    image_width = image.width;
+    image_height = image.height;
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, image_x, image_y)
+  }
+    
+
+}
+
+
+function draw(){
+  ctx.fillStyle = "rgb(230, 230, 230)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, image_x, image_y, image.width * image_scale, image.height * image_scale);
+}
+
+
+async function next_image() {
     if (index < nimages - 1) {
-    image_x = 0;
-    image_y = 0;
-    image_scale = 1.0;
     index++;
-    draw_initial_image_on_canvas(index);
+    
+    image = await fetch_image(index);
+    // instead of remembering what was the last position and scale of the image, we reset those
+    initial_position_and_scale();
+
+    
+    draw();
     counter.textContent = `${index + 1} / ${nimages}`;
     }
 }
 
-function prev_image() {
+async function prev_image() {
     if (index > 0) {
-    image_x = 0;
-    image_y = 0;
-    image_scale = 1.0;
     index--;
-    draw_initial_image_on_canvas(index);
+
+    image = await fetch_image(index);
+    // instead of remembering what was the last position and scale of the image, we reset those
+    initial_position_and_scale();
+
+    draw();
     counter.textContent = `${index + 1} / ${nimages}`;
     }
 }
 
 
+function is_image_clicked(x, y){
 
+  // x_inside = true when the x position for the cursur was inside the image during click
+  // (the same for y)
+  let x_inside;
+  let y_inside;
 
-window.addEventListener("click", function(e){ 
   const rect = canvas.getBoundingClientRect();
   
   // coordinates of x, y inside the canvas
   // because rect.top considers the viewport, we have to add window.scrollY (to obtain absolute position in the page)
-  const cursur_x_canvas = e.x  - rect.left;
-  const cursur_y_canvas = e.pageY - (rect.top + window.scrollY);
+  const cursur_x_canvas = x  - rect.left;
+  const cursur_y_canvas = y - (rect.top + window.scrollY);
 
   // am i clicking on the image ?
-  if(image_x >= 0 && image_x + image_width <= canvas.width){
+  if(image_x >= 0 && image_x + image.width <= canvas.width){
     // the image is inside the canvas
-    if(cursur_x_canvas >= image_x && cursur_x_canvas <= image_x + image_width){
-      console.log("x is inside");
+    if(cursur_x_canvas >= image_x && cursur_x_canvas <= image_x + image.width){
+      x_inside = true;
     } else {
-      console.log("x is outside");
+      x_inside = false;
     }
   } else {
-    // the image is outside the canvas (we can't trust image_x or image_x + image_width)
-    if(cursur_x_canvas >= Math.max(image_x, 0) && cursur_x_canvas <= Math.min(image_x + image_width, canvas.width)){
-      console.log("x is inside");
+    // the image is outside the canvas (we can't trust image_x or image_x + image.width)
+    if(cursur_x_canvas >= Math.max(image_x, 0) && cursur_x_canvas <= Math.min(image_x + image.width, canvas.width)){
+      x_inside = true;
     } else {
-      console.log("x is outside");
+      x_inside = false;
     }
   }
 
-  if(image_y >= 0 && image_y + image_height <= canvas.height){
+  if(image_y >= 0 && image_y + image.height <= canvas.height){
     // the image is inside the canvas
-    if(cursur_y_canvas >= image_y && cursur_y_canvas <= image_y + image_height){
-      console.log("y is in inside");
+    if(cursur_y_canvas >= image_y && cursur_y_canvas <= image_y + image.height){
+      y_inside = true;
     } else {
-      console.log("y is outside");
+      y_inside = false;
     }
   } else {
-    // the image is outside the canvas (we can't trust image_y or image_y + image_height)
-    if(cursur_y_canvas >= Math.max(image_y, 0) && cursur_y_canvas <= Math.min(image_y + image_height, canvas.height)){
-      console.log("y is in inside");
+    // the image is outside the canvas (we can't trust image_y or image_y + image.height)
+    if(cursur_y_canvas >= Math.max(image_y, 0) && cursur_y_canvas <= Math.min(image_y + image.height, canvas.height)){
+      y_inside = true;
     } else {
-      console.log("y is outside");
+      y_inside = false;
     }
   }
 
+  return x_inside && y_inside;
+}
+
+function is_click_in_canvas(x, y){
+
+  const rect = canvas.getBoundingClientRect();
+  
+  // coordinates of x, y inside the canvas
+  // because rect.top considers the viewport, we have to add window.scrollY (to obtain absolute position in the page)
+  const cursur_x_canvas = x  - rect.left;
+  const cursur_y_canvas = y - (rect.top + window.scrollY);
+
+  // am i clicking inside the canvas ?
+  const x_inside = cursur_x_canvas >= 0 && cursur_x_canvas < canvas.width;
+  const y_inside = cursur_y_canvas >= 0 && cursur_y_canvas < canvas.height;
+  
+  return x_inside && y_inside;
+}
+
+window.addEventListener("click", function(e){
+
+  // for the y, it's necessary to use pageY, because there can be scroll of the page
+  const x = e.pageX;
+  const y = e.pageY
+
+  const image_clicked = is_image_clicked(x, y);
+  console.log("is image clicked ?", image_clicked);
 
 })
+
+
+let is_tracking = false;
+let old_cursur_x = 0;
+let old_cursur_y = 0;
+
+document.addEventListener("mousedown", function(e) {
+  if (e.button === 1 && is_click_in_canvas(e.pageX, e.pageY)) {  // 1 = scrolling wheel
+    // start of tracking with scolling wheel
+
+    is_tracking = true;
+
+    old_cursur_x = e.pageX;
+    old_cursur_y = e.pageY;
+  
+    e.preventDefault();  // to prevent the scroll
+  }
+});
+
+document.addEventListener("mousemove", function(e) {
+  if (is_tracking && is_click_in_canvas(e.pageX, e.pageY)) {
+
+    // let's see the difference between the current position of the cursur and old_cursur_x, old_cursur_y position
+
+    let delta_x = e.pageX - old_cursur_x;
+    let delta_y = e.pageY - old_cursur_y;
+
+    image_x = image_x + delta_x;
+    image_y = image_y + delta_y;
+
+    draw();
+
+    // let's update old_cursur_x, old_cursur_y position
+    old_cursur_x = e.pageX;
+    old_cursur_y = e.pageY;
+  }
+});
+
+document.addEventListener("mouseup", function(e) {
+  if (e.button === 1 && is_tracking) {  // 1 = scrolling wheel
+    // stop tracking with scrolling wheel
+    is_tracking = false;
+  }
+});
