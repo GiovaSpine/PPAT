@@ -127,7 +127,7 @@ function initial_position_and_scale(){
     image_y = (canvas.height / 2) - ((image.height * image_scale) / 2);
   } else {
 
-    image_scale = 1.0;
+    image_scale = 1.2;
 
     image_x = (canvas.width / 2) - (image.width / 2);
     image_y = (canvas.height / 2) - (image.height / 2);
@@ -276,32 +276,32 @@ function is_image_clicked(x, y){
   const cursur_y_canvas = y - (rect.top + window.scrollY);
 
   // am i clicking on the image ?
-  if(image_x >= 0 && image_x + image.width - 1 <= canvas.width - 1){
+  if(image_x >= 0 && image_x + (image.width * image_scale) - 1 <= canvas.width - 1){
     // the image is inside the canvas
-    if(cursur_x_canvas >= image_x && cursur_x_canvas <= image_x + image.width){
+    if(cursur_x_canvas >= image_x && cursur_x_canvas <= image_x + (image.width * image_scale)){
       x_inside = true;
     } else {
       x_inside = false;
     }
   } else {
-    // the image is outside the canvas (we can't trust image_x or image_x + image.width)
-    if(cursur_x_canvas >= Math.max(image_x, 0) && cursur_x_canvas <= Math.min(image_x + image.width, canvas.width)){
+    // the image is outside the canvas (we can't trust image_x or image_x + (image.width * image_scale))
+    if(cursur_x_canvas >= Math.max(image_x, 0) && cursur_x_canvas <= Math.min(image_x + (image.width * image_scale), canvas.width)){
       x_inside = true;
     } else {
       x_inside = false;
     }
   }
 
-  if(image_y >= 0 && image_y + image.height - 1 <= canvas.height - 1){
+  if(image_y >= 0 && image_y + (image.height * image_scale) - 1 <= canvas.height - 1){
     // the image is inside the canvas
-    if(cursur_y_canvas >= image_y && cursur_y_canvas <= image_y + image.height){
+    if(cursur_y_canvas >= image_y && cursur_y_canvas <= image_y + (image.height * image_scale) ){
       y_inside = true;
     } else {
       y_inside = false;
     }
   } else {
-    // the image is outside the canvas (we can't trust image_y or image_y + image.height)
-    if(cursur_y_canvas >= Math.max(image_y, 0) && cursur_y_canvas <= Math.min(image_y + image.height, canvas.height)){
+    // the image is outside the canvas (we can't trust image_y or image_y + (image.height * image_scale) )
+    if(cursur_y_canvas >= Math.max(image_y, 0) && cursur_y_canvas <= Math.min(image_y + (image.height * image_scale) , canvas.height)){
       y_inside = true;
     } else {
       y_inside = false;
@@ -381,3 +381,27 @@ document.addEventListener("mouseup", function(e) {
     is_tracking = false;
   }
 });
+
+
+
+function setup_scroll_zoom(factor = 1.1, minScale = 0.1, maxScale = 10) {
+  canvas.addEventListener("wheel", function (e) {
+    e.preventDefault(); // evita lo scroll della pagina
+
+    if (e.deltaY < 0) {
+      // Scroll verso l’alto → Zoom in
+      image_scale *= factor;
+    } else {
+      // Scroll verso il basso → Zoom out
+      image_scale /= factor;
+    }
+
+    // Limita lo zoom a un intervallo ragionevole
+    image_scale = Math.max(minScale, Math.min(maxScale, image_scale));
+
+    draw(); // ridisegna con il nuovo scale
+    console.log("Zoom:", image_scale.toFixed(3));
+  });
+}
+
+setup_scroll_zoom();
