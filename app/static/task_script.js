@@ -127,7 +127,7 @@ function initial_position_and_scale(){
     image_y = (canvas.height / 2) - ((image.height * image_scale) / 2);
   } else {
 
-    image_scale = 1.2;
+    image_scale = 1.0;
 
     image_x = (canvas.width / 2) - (image.width / 2);
     image_y = (canvas.height / 2) - (image.height / 2);
@@ -245,11 +245,11 @@ function wait_for_click(ignore_first_click = false) {
         return; // continue to listen if the click is outside the image
       }
 
-      document.removeEventListener("click", handler);
+      canvas.removeEventListener("click", handler);
       resolve(e);
     }
 
-    document.addEventListener("click", handler);
+    canvas.addEventListener("click", handler);
   });
 }
 
@@ -260,6 +260,38 @@ function wait_for_click(ignore_first_click = false) {
 
 // ============================================================================
 
+function page_pos_to_canvas_pos(x, y){
+  // converts a postion relative to the page to a position relative to the canvas
+  // it can't return null (because if the canvas was clicked in a certain position, it was clicked on the canvas)
+
+  const rect = canvas.getBoundingClientRect();
+  
+  // coordinates of x, y inside the canvas
+  // because rect.top considers the viewport, we have to add window.scrollY (to obtain absolute position in the page)
+  const cursur_x_canvas = x  - rect.left;
+  const cursur_y_canvas = y - (rect.top + window.scrollY);
+
+  return [cursur_x_canvas, cursur_y_canvas];
+}
+
+
+function canvas_pos_to_image_pos(x, y, return_anyway=false){
+  // converts a position relative to canvas to a position relative to the image
+  // returns null if the canvas position is outside the image and return_anyway = false
+  // if return_anyway = true return the position regardless
+
+  const cursur_x_image = (x - image_x) / image_scale;
+  const cursur_y_image = (y - image_y) / image_scale;
+
+  if(return_anyway){
+    return [cursur_x_image, cursur_y_image];
+  }
+
+  if(cursur_x_image < 0 || cursur_x_image >= image.width || cursur_y_image < 0 || cursur_y_image >= image.height) return null;
+  else return [cursur_x_image, cursur_y_image];
+
+}
+
 
 function is_image_clicked(x, y){
 
@@ -268,12 +300,7 @@ function is_image_clicked(x, y){
   let x_inside;
   let y_inside;
 
-  const rect = canvas.getBoundingClientRect();
-  
-  // coordinates of x, y inside the canvas
-  // because rect.top considers the viewport, we have to add window.scrollY (to obtain absolute position in the page)
-  const cursur_x_canvas = x  - rect.left;
-  const cursur_y_canvas = y - (rect.top + window.scrollY);
+  const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(x, y);
 
   // am i clicking on the image ?
   if(image_x >= 0 && image_x + (image.width * image_scale) - 1 <= canvas.width - 1){
@@ -311,23 +338,9 @@ function is_image_clicked(x, y){
   return x_inside && y_inside;
 }
 
-function is_click_in_canvas(x, y){
 
-  const rect = canvas.getBoundingClientRect();
-  
-  // coordinates of x, y inside the canvas
-  // because rect.top considers the viewport, we have to add window.scrollY (to obtain absolute position in the page)
-  const cursur_x_canvas = x  - rect.left;
-  const cursur_y_canvas = y - (rect.top + window.scrollY);
-
-  // am i clicking inside the canvas ?
-  const x_inside = cursur_x_canvas >= 0 && cursur_x_canvas < canvas.width;
-  const y_inside = cursur_y_canvas >= 0 && cursur_y_canvas < canvas.height;
-  
-  return x_inside && y_inside;
-}
-
-window.addEventListener("click", function(e){
+canvas.addEventListener("click", function(e){
+  // function to test the click of the image
 
   // for the y, it's necessary to use pageY, because there can be scroll of the page
   const x = e.pageX;
@@ -336,6 +349,14 @@ window.addEventListener("click", function(e){
   const image_clicked = is_image_clicked(x, y);
   console.log("is image clicked ?", image_clicked);
 
+  const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(x, y);
+  
+  if(canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas) != null){
+    const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas);
+    console.log("cursur position in the image:", cursur_x_image, cursur_y_image);
+  }
+  
+
 })
 
 
@@ -343,8 +364,8 @@ let is_tracking = false;
 let old_cursur_x = 0;
 let old_cursur_y = 0;
 
-document.addEventListener("mousedown", function(e) {
-  if (e.button === 1 && is_click_in_canvas(e.pageX, e.pageY)) {  // 1 = scrolling wheel
+canvas.addEventListener("mousedown", function(e) {
+  if (e.button === 1) {  // 1 = scrolling wheel
     // start of tracking with scolling wheel
 
     is_tracking = true;
@@ -356,8 +377,8 @@ document.addEventListener("mousedown", function(e) {
   }
 });
 
-document.addEventListener("mousemove", function(e) {
-  if (is_tracking && is_click_in_canvas(e.pageX, e.pageY)) {
+canvas.addEventListener("mousemove", function(e) {
+  if (is_tracking) {
 
     // let's see the difference between the current position of the cursur and old_cursur_x, old_cursur_y position
 
@@ -384,24 +405,41 @@ document.addEventListener("mouseup", function(e) {
 
 
 
-function setup_scroll_zoom(factor = 1.1, minScale = 0.1, maxScale = 10) {
-  canvas.addEventListener("wheel", function (e) {
-    e.preventDefault(); // evita lo scroll della pagina
+canvas.addEventListener("wheel", function (e) {
+  e.preventDefault(); // avoid automatic scroll of the page
 
-    if (e.deltaY < 0) {
-      // Scroll verso l’alto → Zoom in
-      image_scale *= factor;
-    } else {
-      // Scroll verso il basso → Zoom out
-      image_scale /= factor;
-    }
+  // const factor = 1.1; is a reference
+  const min_scale = 0.1, max_scale = 10;
+  const delta = 64;
 
-    // Limita lo zoom a un intervallo ragionevole
-    image_scale = Math.max(minScale, Math.min(maxScale, image_scale));
+  // Warning: factor has to change based on the image size
+  // because if it was constant a big image would be scaled more.
+  // Let's take 640 x 640 pixels as a reference:
+  // if 1.1 is the factor for 640 x 640 pixels, 64 is the delta between changes of dimension
+  // if we want delta = 64 for every image, factor has to change
+  let factor = (Math.max(image.width, image.height) + delta) / Math.max(image.width, image.height);
 
-    draw(); // ridisegna con il nuovo scale
-    console.log("Zoom:", image_scale.toFixed(3));
-  });
-}
+  // we will use them later...
+  const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
+  const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas, return_anyway=true);
 
-setup_scroll_zoom();
+  if (e.deltaY < 0) {
+    // scroll up -> zoom in
+    image_scale *= factor;
+  } else {
+    // scroll down -> zoom out
+    image_scale /= factor;
+  }
+
+  // limit the scroll
+  image_scale = Math.max(min_scale, Math.min(max_scale, image_scale));
+
+  // we can't just increase or decrease image_scale
+  // we want the zoom to happen in the position of the cursor, so image_x and image_y have to change
+  image_x = cursur_x_canvas - (cursur_x_image * image_scale);
+  image_y = cursur_y_canvas - (cursur_y_image * image_scale);
+
+
+  draw();
+  
+});
