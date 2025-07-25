@@ -59,7 +59,7 @@
 {% if not task_created %}
 
 {% else %}
-    <script src="{{ url_for('static', filename='task_script.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='taskMain.js') }}"></script>
 {% endif %}
    
 {% endblock %}

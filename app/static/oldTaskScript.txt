@@ -1,3 +1,8 @@
+
+// old unorganized script that contained every code
+// now it's implemented with other task scripts...
+
+/*
 console.log("Testing task_script.js");
 
 
@@ -443,3 +448,5 @@ canvas.addEventListener("wheel", function (e) {
   draw();
   
 });
+
+*/
