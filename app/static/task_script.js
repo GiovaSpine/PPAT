@@ -22,6 +22,14 @@ let image_x = 0;
 let image_y = 0;
 let image_scale = 1.0;
 
+
+let vanishing_points_x = new Array(nimages);
+let vanishing_points_y = new Array(nimages);
+let vanishing_points_z = new Array(nimages);
+let construction_points = new Array(nimages);
+let label_points = new Array(nimages);
+
+
 class Point {
   constructor(x, y, color){
     // in an image x is the rows, y is the columns and (0, 0) is at the top left corner
@@ -169,6 +177,7 @@ function draw(){
   ctx.drawImage(image, image_x, image_y, image.width * image_scale, image.height * image_scale);
 }
 
+// ============================================================================
 
 async function next_image() {
     if (index < nimages - 1) {
@@ -197,6 +206,60 @@ async function prev_image() {
     }
 }
 
+function reset_view(){
+  initial_position_and_scale();
+  draw();
+}
+
+
+
+async function add_vanishing_point(){
+
+  const e1 = await wait_for_click(ignore_first_click=true);  // the first click is the click of the button
+
+  const e2 = await wait_for_click();
+  
+  const e3 = await wait_for_click();
+
+  const e4 = await wait_for_click();
+
+}
+
+
+
+function wait_for_click(ignore_first_click = false) {
+  return new Promise((resolve) => {
+    let ignored = !ignore_first_click;
+
+    function handler(e) {
+      const x = e.pageX;
+      const y = e.pageY;
+
+      if (!ignored) {
+        ignored = true; // ignores the first click if rquested
+        return;
+      }
+
+      if (!is_image_clicked(x, y)) {
+        console.log("Click ignored (outiside the image)");
+        return; // continue to listen if the click is outside the image
+      }
+
+      document.removeEventListener("click", handler);
+      resolve(e);
+    }
+
+    document.addEventListener("click", handler);
+  });
+}
+
+
+
+
+
+
+// ============================================================================
+
 
 function is_image_clicked(x, y){
 
@@ -213,7 +276,7 @@ function is_image_clicked(x, y){
   const cursur_y_canvas = y - (rect.top + window.scrollY);
 
   // am i clicking on the image ?
-  if(image_x >= 0 && image_x + image.width <= canvas.width){
+  if(image_x >= 0 && image_x + image.width - 1 <= canvas.width - 1){
     // the image is inside the canvas
     if(cursur_x_canvas >= image_x && cursur_x_canvas <= image_x + image.width){
       x_inside = true;
@@ -229,7 +292,7 @@ function is_image_clicked(x, y){
     }
   }
 
-  if(image_y >= 0 && image_y + image.height <= canvas.height){
+  if(image_y >= 0 && image_y + image.height - 1 <= canvas.height - 1){
     // the image is inside the canvas
     if(cursur_y_canvas >= image_y && cursur_y_canvas <= image_y + image.height){
       y_inside = true;

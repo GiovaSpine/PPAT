@@ -29,13 +29,22 @@
         <button type="submit">Delete Task</button>
     </form>
 
+    <button type="button" onclick="reset_view()">Reset View</button>
+
     <div class="controls">
         <button onclick="prev_image()">⬅</button>
         <span id="counter">1 / {{ nimages }}</span>
         <button onclick="next_image()">➡</button>
     </div>
 
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas"></canvas><br>
+
+    <button type="button" onclick="add_vanishing_point_x()">Add Vanishing Point X</button>
+    <button type="button" onclick="add_vanishing_point_y()">Add Vanishing Point Y</button>
+    <button type="button" onclick="add_vanishing_point_z()">Add Vanishing Point Z</button>
+    <button type="button" onclick="add_construction_point()">Add Construction Point</button>
+    <button type="button" onclick="add_label_point()">Add Label Point</button>
+
     
 {% endif %}
 
