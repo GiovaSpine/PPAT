@@ -1,9 +1,14 @@
 import { ctx, canvas, state } from "./taskState.js";
+import { Point } from "./taskClasses.js" ;
 
 export function draw(){
+  const punto = new Point(200, 200, "red");
+
   ctx.fillStyle = "rgb(230, 230, 230)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(state.image, state.image_x, state.image_y, state.image.width * state.image_scale, state.image.height * state.image_scale);
+
+  punto.draw();
 }
 
 export function initial_position_and_scale(){

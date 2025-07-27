@@ -25,27 +25,27 @@ async function main() {
 main();
 
 async function next_image() {
-  if (state.index < state.nimages - 1) {
-    state.index++;
-    state.image = await fetch_image(state.index);
+  state.index++;
+  if(state.index >= state.nimages) state.index = 0;
 
-    initial_position_and_scale();
+  state.image = await fetch_image(state.index);
 
-    draw();
-    counter.textContent = `${state.index + 1} / ${state.nimages}`;
-  }
+  initial_position_and_scale();
+
+  draw();
+  counter.textContent = `${state.index + 1} / ${state.nimages}`;
 }
 
 async function prev_image() {
-  if (state.index > 0) {
-    state.index--;
-    state.image = await fetch_image(state.index);
+  state.index--;
+  if(state.index < 0) state.index = state.nimages - 1;
 
-    initial_position_and_scale();
+  state.image = await fetch_image(state.index);
 
-    draw();
-    counter.textContent = `${state.index + 1} / ${state.nimages}`;
-  }
+  initial_position_and_scale();
+
+  draw();
+  counter.textContent = `${state.index + 1} / ${state.nimages}`;
 }
 
 function reset_view(){

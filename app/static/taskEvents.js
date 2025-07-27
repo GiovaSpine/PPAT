@@ -116,9 +116,9 @@ canvas.addEventListener("wheel", function (e) {
   // Let's take 640 x 640 pixels as a reference:
   // if 1.1 is the factor for 640 x 640 pixels, 64 is the delta between changes of dimension
   // if we want delta = 64 for every image, factor has to change
-  const factor = (Math.max(state.image.width, state.image.height) + delta) / Math.max(state.image.width, state.image.height);
+  const factor = (Math.min(state.image.width, state.image.height) + delta) / Math.min(state.image.width, state.image.height);
 
-  // we will use them later...
+  // we will use them later for zooming in the position of the cursor
   const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
   const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas, true);
 
