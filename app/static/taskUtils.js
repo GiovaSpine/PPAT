@@ -1,5 +1,7 @@
 import { canvas, state } from "./taskState.js";
 
+// CANVAS / IMAGE UTILS FUNCTIONS
+
 export function page_pos_to_canvas_pos(x, y){
   // converts a postion relative to the page to a position relative to the canvas
   // it can't return null (because if the canvas was clicked in a certain position, it was clicked on the canvas)
@@ -69,4 +71,30 @@ export function is_image_clicked(x, y){
   }
   
   return x_inside && y_inside;
+}
+
+// ========================================================
+
+// VECTOR OPERATIONS
+
+export function vector_add(a, b) {
+  return a.map((val, i) => val + b[i]);
+}
+
+export function vector_diff(a, b) {
+  return a.map((val, i) => val - b[i]);
+}
+
+export function vector_dot(a, b) {
+  return a.reduce((sum, val, i) => sum + val * b[i], 0);
+}
+
+export function vector_norm(v) {
+  return Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
+}
+
+export function vector_normalize(v) {
+  const norm = vector_norm(v);
+  if (norm === 0) throw new Error("Cannot normalize zero vector");
+  return v.map(val => val / norm);
 }

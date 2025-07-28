@@ -1,6 +1,7 @@
 import { canvas, state } from "./taskState.js";
 import { draw } from "./taskImageRenderer.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, is_image_clicked } from "./taskUtils.js";
+import { Point, Line } from "./taskClasses.js";
 
 
 export function wait_for_click(ignore_first_click = false) {
@@ -49,7 +50,15 @@ canvas.addEventListener("click", function(e){
     if(canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas) != null){
       const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas);
       console.log("cursur position in the image:", cursur_x_image, cursur_y_image);
+
+      const punto = new Point(cursur_x_image, cursur_y_image, "green");
+      const linea = new Line(200, 340, 1, 2, "blue");
+
+      punto.draw();
+      
+      console.log("===> ", linea.is_point_close(punto));
     }
+    
   }
 });
 
