@@ -5,5 +5,27 @@
     position: relative;
     transform: translate(-50%, 0%);
     left: 50%;
+}
 
+#points_container {
+    border: 1px solid #ccc;
+    width: 500px;
+    height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.point_item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px;
+    margin-bottom: 4px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #f4f4f4;
+}
+
+.controls button {
+    margin-left: 4px;
 }

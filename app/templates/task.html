@@ -39,9 +39,9 @@
 
     <canvas id="canvas"></canvas><br>
 
-    <button type="button" onclick="add_vanishing_point_x()">Add Vanishing Point X</button>
-    <button type="button" onclick="add_vanishing_point_y()">Add Vanishing Point Y</button>
-    <button type="button" onclick="add_vanishing_point_z()">Add Vanishing Point Z</button>
+    <button type="button" onclick="add_vanishing_point('x')">Add Vanishing Point X</button>
+    <button type="button" onclick="add_vanishing_point('y')">Add Vanishing Point Y</button>
+    <button type="button" onclick="add_vanishing_point('z')">Add Vanishing Point Z</button>
     <button type="button" onclick="add_construction_point()">Add Construction Point</button>
     <button type="button" onclick="add_label_point()">Add Label Point</button>
 
@@ -56,6 +56,9 @@
         <label for="3.">2.</label>
         <input type="radio" id="3." name="visibility" value="2">
     </div>
+
+    <div id="points_container"></div>
+
 
     
 {% endif %}

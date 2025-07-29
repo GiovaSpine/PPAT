@@ -15,6 +15,8 @@ export const state = {
   nimages: 0,
   image_list: [],
 
+  nconstructionpoints: 50,  // the max number of construction points
+
   index: 0,
 
   image: null,
@@ -22,13 +24,5 @@ export const state = {
   image_y: 0,
   image_scale: 1.0,
 };
-
-/*
-export let vanishing_points_x = new Array(nimages);
-export let vanishing_points_y = new Array(nimages);
-export let vanishing_points_z = new Array(nimages);
-export let construction_points = new Array(nimages);
-export let label_points = new Array(nimages);
-*/
 
 

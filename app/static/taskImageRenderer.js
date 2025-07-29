@@ -1,16 +1,32 @@
 import { ctx, canvas, state } from "./taskState.js";
 import { Line, Point } from "./taskClasses.js" ;
+import { construction_points, label_points, temp_lines } from "./taskMain.js";
 
 export function draw(){
-  const punto = new Point(200, 180, "red");
-  const linea = new Line(200, 340, 1, 2, "blue");
+  // const punto = new Point(200, 180, "red");
+  // const linea = new Line(200, 340, 1, 2, "blue");
 
   ctx.fillStyle = "rgb(230, 230, 230)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(state.image, state.image_x, state.image_y, state.image.width * state.image_scale, state.image.height * state.image_scale);
 
-  punto.draw();
-  linea.draw();
+  // punto.draw();
+  // linea.draw();
+
+  // we need to draw the varius lines...
+  for(let i = 0; i < temp_lines[state.index].length; i++){
+    temp_lines[state.index][i].draw();
+  }
+
+  // we need to draw the varius points...
+  for(let i = 0; i < state.nconstructionpoints; i++){
+    if(construction_points[state.index][i] != null) construction_points[state.index][i].draw();
+  }
+
+  for(let i = 0; i < state.nimages; i++){
+    if(label_points[state.index][i] != null) label_points[state.index][i].draw();
+  }
+  
 }
 
 export function initial_position_and_scale(){
