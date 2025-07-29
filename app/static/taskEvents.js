@@ -30,6 +30,69 @@ export function wait_for_click(ignore_first_click = false) {
   });
 }
 
+
+export function wait_for_click_or_escape(ignore_first_click = false) {
+  return new Promise((resolve) => {
+    let ignored = !ignore_first_click;
+
+    function click_handler(e) {
+      const x = e.pageX;
+      const y = e.pageY;
+
+      if (!ignored) {
+        ignored = true;
+        return;
+      }
+
+      if (!is_image_clicked(x, y)) {
+        console.log("Click ignored (outside the image)");
+        return;
+      }
+
+      cleanup();
+      resolve(e);
+    }
+
+    function key_handler(e) {
+      if (e.key === "Escape") {
+        cleanup();
+        resolve(null);
+      }
+    }
+
+    function cleanup() {
+      canvas.removeEventListener("click", click_handler);
+      window.removeEventListener("keydown", key_handler);
+    }
+
+    canvas.addEventListener("click", click_handler);
+    window.addEventListener("keydown", key_handler);
+  });
+}
+
+
+export function wait_for_enter_or_escape() {
+  return new Promise((resolve) => {
+    function key_handler(e) {
+      if (e.key === "Enter") {
+        cleanup();
+        resolve(1);
+      } else if (e.key === "Escape") {
+        cleanup();
+        resolve(null);
+      }
+    }
+
+    function cleanup() {
+      window.removeEventListener("keydown", key_handler);
+    }
+
+    window.addEventListener("keydown", key_handler);
+  });
+}
+
+
+
 // ========================================================
 
 // TEST

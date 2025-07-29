@@ -32,18 +32,18 @@
     <button type="button" onclick="reset_view()">Reset View</button>
 
     <div class="controls">
-        <button onclick="prev_image()">⬅</button>
+        <button id="prev_button" onclick="prev_image()">⬅</button>
         <span id="counter">1 / {{ nimages }}</span>
-        <button onclick="next_image()">➡</button>
+        <button id="next_button" onclick="next_image()">➡</button>
     </div>
 
     <canvas id="canvas"></canvas><br>
 
-    <button type="button" onclick="add_vanishing_point('x')">Add Vanishing Point X</button>
-    <button type="button" onclick="add_vanishing_point('y')">Add Vanishing Point Y</button>
-    <button type="button" onclick="add_vanishing_point('z')">Add Vanishing Point Z</button>
-    <button type="button" onclick="add_construction_point()">Add Construction Point</button>
-    <button type="button" onclick="add_label_point()">Add Label Point</button>
+    <button type="button" id="vp_x_button" onclick="add_vanishing_point('x')">Add Vanishing Point X</button>
+    <button type="button" id="vp_y_button" onclick="add_vanishing_point('y')">Add Vanishing Point Y</button>
+    <button type="button" id="vp_z_button" onclick="add_vanishing_point('z')">Add Vanishing Point Z</button>
+    <button type="button" id="construction_button" onclick="add_construction_point()">Add Construction Point</button>
+    <button type="button" id="label_button" onclick="add_label_point()">Add Label Point</button>
 
     <div>
         <label for="visibility">Visibility:</label>
