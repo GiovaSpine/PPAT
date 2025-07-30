@@ -1,9 +1,9 @@
-import { counter, ctx, state } from "./taskState.js";
+import { counter, message_element, state } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
 import { fetch_data, fetch_image_list, fetch_image } from "./taskDataLoader.js";
-import { wait_for_click, wait_for_click_or_escape, wait_for_enter_or_escape } from "./taskEvents.js";
+import { wait_for_click_or_escape, wait_for_enter_or_escape } from "./taskEvents.js";
 import { BoundingBox, Line, Point } from "./taskClasses.js";
-import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff } from "./taskUtils.js";
+import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked } from "./taskUtils.js";
 
 window.next_image = next_image;
 window.prev_image = prev_image;
@@ -60,6 +60,8 @@ async function next_image() {
 
   // let's update the counter of images
   counter.textContent = `${state.index + 1} / ${state.nimages}`;
+  // let's reset the message
+  message_element.textContent = "";
 }
 
 
@@ -77,6 +79,8 @@ async function prev_image() {
 
   // let's update the counter of images
   counter.textContent = `${state.index + 1} / ${state.nimages}`;
+  // let's reset the message
+  message_element.textContent = "";
 }
 
 // ========================================================
@@ -157,9 +161,19 @@ function set_all_buttons_enabled(enabled){
 
 
 async function add_vanishing_point(type_of_vp){
+
+  // check if there is already a vanishing point for type_of_vp axis
+  const message = "Warning: there is already a vanishing point on the " + type_of_vp + " axis for this image";
+  if(type_of_vp == 'x' && vanishing_points_x[state.index] != null) {message_element.textContent = message; return;}
+  else if(type_of_vp == 'y' && vanishing_points_y[state.index] != null) {message_element.textContent = message; return;}
+  else if(type_of_vp == 'z' && vanishing_points_z[state.index] != null) {message_element.textContent = message; return;}
+  else message_element.textContent = "Select two point for the first line and two other points for the second line; press enter to confirm the selection or esc to undo the operation";
+
+
   set_all_buttons_enabled(false);  // deactivate all the buttons
 
   function undo_add_vanishing_point(){
+    message_element.textContent = "";
     temp_lines[state.index] = [];
     draw();
     set_all_buttons_enabled(true);  // reactivate all the buttons
@@ -224,18 +238,55 @@ async function add_vanishing_point(type_of_vp){
   // at the end we don't care about the lines that he chose to find the vanishing point
   temp_lines[state.index] = [];
 
+  message_element.textContent = "";
   update_points_container();
-
   draw();
-
   set_all_buttons_enabled(true);  // reactivate all the buttons
 }
 
 
+function check_all_vanishing_points(type_of_point){
+  // function that check if all vanishing point are set; used at the start of label and construction point
+  // if not all are set it returns false and show a message about it
+  // if all are set it returns true and show a message about it
+  const is_vp_x_set = vanishing_points_x[state.index] != null;
+  const is_vp_y_set = vanishing_points_y[state.index] != null;
+  const is_vp_z_set = vanishing_points_z[state.index] != null;
+
+  if (is_vp_x_set && is_vp_y_set && is_vp_z_set) {
+    message_element.textContent = "Select the point or press esc to undo the operation";
+    return true;
+  }
+  // else there is at least one vanishing point that is not present
+
+  let message = `Cannot add ${type_of_point} point: `;
+
+  // let's find the missing vanishing_points
+  const missing = [];
+  if (!is_vp_x_set) missing.push("x");
+  if (!is_vp_y_set) missing.push("y");
+  if (!is_vp_z_set) missing.push("z");
+
+  if (missing.length >= 2) {
+    message += "vanishing points missing for axes: " + missing.join(", ");
+  } else {
+    message += "vanishing point missing for axis: " + missing[0];
+  }
+
+  message_element.textContent = message;
+  return false;
+}
+
+
 async function add_label_point(){
+
+  // check if there user added the vanishing points for every axis
+  if(!check_all_vanishing_points("label")) return;
+
   set_all_buttons_enabled(false);  // deactivate all the buttons
 
-  const e = await wait_for_click();
+  const e = await wait_for_click_or_escape();
+  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
 
   // we need to find an id for the point
   // we look at the first empty space in the label_points[state.index] vector
@@ -250,18 +301,22 @@ async function add_label_point(){
   const point = new Point(cursur_x_image, cursur_y_image, "blue");
   label_points[state.index][id] = point;
 
+  message_element.textContent = "";
   update_points_container();
-
   draw();
-
   set_all_buttons_enabled(true);  // reactivate all the buttons
 }
 
 
 async function add_construction_point(){
+
+  // check if there user added the vanishing points for every axis
+  if(!check_all_vanishing_points("construction")) return;
+
   set_all_buttons_enabled(false);  // deactivate all the buttons
 
-  const e = await wait_for_click();
+  const e = await wait_for_click_or_escape();
+  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
 
   // we need to find an id for the point
   // we look at the first empty space in the construction_points[state.index] vector
@@ -276,18 +331,26 @@ async function add_construction_point(){
   const point = new Point(cursur_x_image, cursur_y_image, "gray");
   construction_points[state.index][id] = point;
 
+  message_element.textContent = "";
   update_points_container();
-
   draw();
-
   set_all_buttons_enabled(true);  // reactivate all the buttons
 }
 
 
 async function add_bounding_box(){
+
+  // check if there is already a bounding box
+  if(bounding_boxes[state.index] != null){
+    message_element.textContent = "Warning: there is already a bounding box for this image";
+    return;
+  } else message_element.textContent = "Select the two vertices for the bounding box; press enter to confirm the selection or esc to undo the operation";
+  
+
   set_all_buttons_enabled(false);  // deactivate all the buttons
 
   function undo_add_bounding_box(){
+    message_element.textContent = "";
     bounding_boxes[state.index] = null;
     draw();
     set_all_buttons_enabled(true);  // reactivate all the buttons
@@ -300,14 +363,16 @@ async function add_bounding_box(){
   const [cursur_x1_image, cursur_y1_image] = canvas_pos_to_image_pos(cursur_x1_canvas, cursur_y1_canvas);
 
   const mousemove_handler = function(e) {
-    const [cursur_x0_canvas, cursur_y0_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
-    const [cursur_x0_image, cursur_y0_image] = canvas_pos_to_image_pos(cursur_x0_canvas, cursur_y0_canvas);
+    if(is_image_clicked(e.pageX, e.pageY)){
+      const [cursur_x0_canvas, cursur_y0_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
+      const [cursur_x0_image, cursur_y0_image] = canvas_pos_to_image_pos(cursur_x0_canvas, cursur_y0_canvas);
 
-    // let's create the bounding box
-    const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, "red");
-    // let's add it already in bounding_boxes (we might remove it later)
-    bounding_boxes[state.index] = bounding_box;
-    draw();
+      // let's create the bounding box
+      const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, "red");
+      // let's add it already in bounding_boxes (we might remove it later)
+      bounding_boxes[state.index] = bounding_box;
+      draw();
+    }
   };
 
   // we show dynamically how the bounding box can be
@@ -333,10 +398,12 @@ async function add_bounding_box(){
   const is_enter_pressed = await wait_for_enter_or_escape();
   if(is_enter_pressed == null) {undo_add_bounding_box(); return};
 
+  message_element.textContent = "";
   update_points_container();
-
   set_all_buttons_enabled(true);  // reactivate all the buttons
 }
+
+
 
 // ========================================================
 
@@ -457,14 +524,24 @@ function update_points_container(){
 
 
 // Functions associated with the buttons in the points container
-function delete_vanishing_point(type_of_vanishing_point){
-  if(type_of_vanishing_point == 'x'){
+function delete_vanishing_point(type_of_vp){
+  // but what happens to the points alreay present ? we have to delete all of them
+  for(let i = 0; i < state.nconstructionpoints; i++){
+    construction_points[state.index][i] = null;
+  }
+  for(let i = 0; i < state.nimages; i++){
+    label_points[state.index][i] = null;
+  }
+
+  if(type_of_vp == 'x'){
     vanishing_points_x[state.index] = null;
-  } else if(type_of_vanishing_point == 'y'){
+  } else if(type_of_vp == 'y'){
     vanishing_points_y[state.index] = null;
-  } else if(type_of_vanishing_point == 'z'){
+  } else if(type_of_vp == 'z'){
     vanishing_points_z[state.index] = null;
   } else console.log("Impossible to have this option (in the functions of points container)");
+
+  draw();
   update_points_container();
 }
 

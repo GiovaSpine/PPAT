@@ -3,20 +3,17 @@ import { Line, Point } from "./taskClasses.js" ;
 import { bounding_boxes, construction_points, label_points, temp_lines } from "./taskMain.js";
 
 export function draw(){
-  // const punto = new Point(200, 180, "red");
-  // const linea = new Line(200, 340, 1, 2, "blue");
-
   ctx.fillStyle = "rgb(230, 230, 230)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(state.image, state.image_x, state.image_y, state.image.width * state.image_scale, state.image.height * state.image_scale);
-
-  // punto.draw();
-  // linea.draw();
 
   // we need to draw the varius temporary lines...
   for(let i = 0; i < temp_lines[state.index].length; i++){
     temp_lines[state.index][i].draw();
   }
+
+  // we need to draw the bounding box
+  if(bounding_boxes[state.index] != null) bounding_boxes[state.index].draw();
 
   // we need to draw the varius points...
   for(let i = 0; i < state.nconstructionpoints; i++){
@@ -27,8 +24,7 @@ export function draw(){
     if(label_points[state.index][i] != null) label_points[state.index][i].draw();
   }
 
-  // we need to draw the bounding box
-  if(bounding_boxes[state.index] != null) bounding_boxes[state.index].draw();
+  
   
 }
 

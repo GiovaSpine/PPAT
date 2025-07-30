@@ -78,7 +78,6 @@ def delete_task():
         shutil.rmtree(task_directory)
     return redirect(url_for('task'))
 
-
 @app.route('/task/<path:filename>')
 def serve_task_file(filename):
     task_folder = os.path.join(app.root_path, 'Task')
@@ -88,6 +87,11 @@ def serve_task_file(filename):
         abort(404)
 
     return send_from_directory(task_folder, filename)
+
+@app.route('/export-task')
+def export_task():
+    return "export"
+
 
 # =============================================================================
 

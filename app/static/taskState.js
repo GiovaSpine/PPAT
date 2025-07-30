@@ -4,8 +4,10 @@ export const counter = document.getElementById("counter");
 
 export const canvas = document.getElementById("canvas");
 export const ctx = canvas.getContext("2d");
-canvas.width = 1400;
+canvas.width = 1200;
 canvas.height = 800;
+
+export const message_element = document.getElementById("message");
 
 export const task_directory = '/task/';
 export const images_directory = task_directory + 'Images/';
