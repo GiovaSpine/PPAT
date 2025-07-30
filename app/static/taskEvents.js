@@ -99,7 +99,7 @@ export function wait_for_enter_or_escape() {
 
 canvas.addEventListener("click", function(e){
   // function to test the click of the image
-  const print = true;
+  const print = false;
 
   if(print){
     const x = e.pageX;
@@ -172,17 +172,9 @@ document.addEventListener("mouseup", function(e) {
 canvas.addEventListener("wheel", function (e) {
   e.preventDefault(); // avoid automatic scroll of the page
 
-  // const factor = 1.1; is a reference
+  const factor = 1.1;
   const min_scale = 0.1, max_scale = 10;
-  const delta = 64;
-
-  // Warning: factor has to change based on the image size
-  // because if it was constant a big image would be scaled more.
-  // Let's take 640 x 640 pixels as a reference:
-  // if 1.1 is the factor for 640 x 640 pixels, 64 is the delta between changes of dimension
-  // if we want delta = 64 for every image, factor has to change
-  const factor = (Math.min(state.image.width, state.image.height) + delta) / Math.min(state.image.width, state.image.height);
-
+  
   // we will use them later for zooming in the position of the cursor
   const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
   const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas, true);

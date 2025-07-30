@@ -3,15 +3,14 @@ import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
 import { fetch_data, fetch_image_list, fetch_image } from "./taskDataLoader.js";
 import { wait_for_click_or_escape, wait_for_enter_or_escape } from "./taskEvents.js";
 import { BoundingBox, Line, Point } from "./taskClasses.js";
-import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked } from "./taskUtils.js";
+import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked, vector_normalize } from "./taskUtils.js";
 
 window.next_image = next_image;
 window.prev_image = prev_image;
 window.reset_view = reset_view;
 
 window.add_vanishing_point = add_vanishing_point;
-window.add_construction_point = add_construction_point;
-window.add_label_point = add_label_point;
+window.add_point = add_point;
 window.add_bounding_box = add_bounding_box;
 
 window.delete_vanishing_point = delete_vanishing_point;
@@ -245,97 +244,80 @@ async function add_vanishing_point(type_of_vp){
 }
 
 
-function check_all_vanishing_points(type_of_point){
-  // function that check if all vanishing point are set; used at the start of label and construction point
-  // if not all are set it returns false and show a message about it
-  // if all are set it returns true and show a message about it
+
+async function add_point(type_of_point){
+
+  // check if there user added the vanishing points for every axis
   const is_vp_x_set = vanishing_points_x[state.index] != null;
   const is_vp_y_set = vanishing_points_y[state.index] != null;
   const is_vp_z_set = vanishing_points_z[state.index] != null;
 
   if (is_vp_x_set && is_vp_y_set && is_vp_z_set) {
     message_element.textContent = "Select the point or press esc to undo the operation";
-    return true;
-  }
-  // else there is at least one vanishing point that is not present
-
-  let message = `Cannot add ${type_of_point} point: `;
-
-  // let's find the missing vanishing_points
-  const missing = [];
-  if (!is_vp_x_set) missing.push("x");
-  if (!is_vp_y_set) missing.push("y");
-  if (!is_vp_z_set) missing.push("z");
-
-  if (missing.length >= 2) {
-    message += "vanishing points missing for axes: " + missing.join(", ");
   } else {
-    message += "vanishing point missing for axis: " + missing[0];
-  }
+    // else there is at least one vanishing point that is not present
+    let message = `Cannot add ${type_of_point} point: `;
 
-  message_element.textContent = message;
-  return false;
-}
+    // let's find the missing vanishing points
+    const missing = [];
+    if (!is_vp_x_set) missing.push("x");
+    if (!is_vp_y_set) missing.push("y");
+    if (!is_vp_z_set) missing.push("z");
 
-
-async function add_label_point(){
-
-  // check if there user added the vanishing points for every axis
-  if(!check_all_vanishing_points("label")) return;
-
-  set_all_buttons_enabled(false);  // deactivate all the buttons
-
-  const e = await wait_for_click_or_escape();
-  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
-
-  // we need to find an id for the point
-  // we look at the first empty space in the label_points[state.index] vector
-  let id = 0;
-  for(; id < state.npoints; id++){
-    if(label_points[state.index][id] == null) break;
-  }
-
-  // let's add the label point in label_points
-  const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
-  const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas);
-  const point = new Point(cursur_x_image, cursur_y_image, "blue");
-  label_points[state.index][id] = point;
-
-  message_element.textContent = "";
-  update_points_container();
-  draw();
-  set_all_buttons_enabled(true);  // reactivate all the buttons
-}
-
-
-async function add_construction_point(){
-
-  // check if there user added the vanishing points for every axis
-  if(!check_all_vanishing_points("construction")) return;
-
-  set_all_buttons_enabled(false);  // deactivate all the buttons
-
-  const e = await wait_for_click_or_escape();
-  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
-
-  // we need to find an id for the point
-  // we look at the first empty space in the construction_points[state.index] vector
-  let id = 0;
-  for(; id < state.npoints; id++){
-    if(construction_points[state.index][id] == null) break;
+    if (missing.length >= 2) {
+      message += "vanishing points missing for axes: " + missing.join(", ");
+    } else {
+      message += "vanishing point missing for axis: " + missing[0];
+    }
+    message_element.textContent = message;
+    return;
   }
   
-  // let's add the construction point in construction_points
+  set_all_buttons_enabled(false);  // deactivate all the buttons
+
+  const e = await wait_for_click_or_escape();
+  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
+
+  // we need to find an id for the point
+  // we look at the first empty space in the corrisponding array
+  let id = 0;
+  if(type_of_point == "label"){
+    for(; id < state.npoints; id++){
+      if(label_points[state.index][id] == null) break;
+    }
+  } else if(type_of_point == "construction"){
+    for(; id < state.nconstructionpoints; id++){
+      if(construction_points[state.index][id] == null) break;
+    }
+  } else console.log("Impossible to have this option in add_point");
+
+  // let's make the point
   const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
   const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas);
-  const point = new Point(cursur_x_image, cursur_y_image, "gray");
-  construction_points[state.index][id] = point;
+  const point = new Point(cursur_x_image, cursur_y_image, (type_of_point == "label") ? "blue" : "gray");
+
+  // we need to add the perspective (the lines to the vanishing points)
+  // let's calculate the vector from the point to the vanishing points (it's just point - vanishing point, all normalized)
+  const dir_p_vp_x = vector_normalize(vector_diff([vanishing_points_x[state.index][0], vanishing_points_x[state.index][1]], [point.x, point.y]));
+  const dir_p_vp_y = vector_normalize(vector_diff([vanishing_points_y[state.index][0], vanishing_points_y[state.index][1]], [point.x, point.y]));
+  const dir_p_vp_z = vector_normalize(vector_diff([vanishing_points_z[state.index][0], vanishing_points_z[state.index][1]], [point.x, point.y]));
+  point.line_to_vp_x = new Line(point.x, point.y, dir_p_vp_x[0], dir_p_vp_x[1] , "red");
+  point.line_to_vp_y = new Line(point.x, point.y, dir_p_vp_y[0], dir_p_vp_y[1] , "green");
+  point.line_to_vp_z = new Line(point.x, point.y, dir_p_vp_z[0], dir_p_vp_z[1] , "blue");
+
+  // let's add the point to the corresponding array
+  if(type_of_point == "label"){
+    label_points[state.index][id] = point;
+  } else if(type_of_point == "construction"){
+    construction_points[state.index][id] = point;
+  } else console.log("Impossible to have this option in add_point");
 
   message_element.textContent = "";
   update_points_container();
   draw();
   set_all_buttons_enabled(true);  // reactivate all the buttons
 }
+
 
 
 async function add_bounding_box(){

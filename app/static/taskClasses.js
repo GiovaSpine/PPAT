@@ -96,7 +96,7 @@ export class Line {
       }
     }
 
-    draw(){
+    draw(dotted=false){
       if(this.hide) return;
 
       // we want to draw the line across all the image, so we have to calculate the limits
@@ -104,13 +104,54 @@ export class Line {
       const [x1, y1] = limits[0];
       const [x2, y2] = limits[1];
 
-      ctx.beginPath();
-      ctx.moveTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
-      ctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = this.thickness;
-      ctx.stroke();
+      if(dotted){
+        // draw the line normally (continuously) from (px, py) following the direction of the vector (dx, dy)
+        // draw the dotted line in the opposite direction
+
+        const limits = this.#calculate_limits(0, 0, state.image.width, state.image.height);
+        let [x1, y1] = limits[0];
+        let [x2, y2] = limits[1];
+        // we don't know if (px, py) have to go continuously or dotted to (x1, y1) or (x2, y2)
+        // (x1, y1) = (px, py) + t * (dx, dy)
+        // if t >= 0, that means (px, py) have to go continually to (x1, y1)
+
+        const t = (x1 - this.px) / this.dx;
+        if(t >= 0){
+          // it's okay like it is
+        } else {
+          // we have to swap the,
+          const [aux_x, aux_y] = [x1, y1];
+          [x1, y1] = [x2, y2];
+          [x2, y2] = [aux_x, aux_y];
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(state.image_x + (this.px * state.image_scale), state.image_y + (this.py * state.image_scale));
+        ctx.lineTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.thickness;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.moveTo(state.image_x + (this.px * state.image_scale), state.image_y + (this.py * state.image_scale));
+        ctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.thickness;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // simply draw all the line continuously
+        ctx.beginPath();
+        ctx.moveTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
+        ctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.thickness;
+        ctx.stroke();
+      }
+ 
     }
+
 }
 
 
@@ -130,6 +171,10 @@ export class Point {
 
   draw(){
     if(this.hide) return;
+
+    this.line_to_vp_x.draw(true);
+    this.line_to_vp_y.draw(true);
+    this.line_to_vp_z.draw(true);
 
     ctx.fillStyle = this.color;
     ctx.beginPath();
