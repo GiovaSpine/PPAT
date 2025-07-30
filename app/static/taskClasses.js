@@ -97,6 +97,8 @@ export class Line {
     }
 
     draw(){
+      if(this.hide) return;
+
       // we want to draw the line across all the image, so we have to calculate the limits
       const limits = this.#calculate_limits(0, 0, state.image.width, state.image.height);
       const [x1, y1] = limits[0];
@@ -127,11 +129,44 @@ export class Point {
   }
 
   draw(){
-    if(!this.hide){
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(state.image_x + (this.x * state.image_scale), state.image_y + (this.y * state.image_scale), this.radius, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    if(this.hide) return;
+
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(state.image_x + (this.x * state.image_scale), state.image_y + (this.y * state.image_scale), this.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+export class BoundingBox {
+  constructor(x1, y1, x2, y2, color){
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+
+    this.hide = false;
+    this.thickness = 2;
+    this.color = color;
+  }
+
+  draw(){
+    if(this.hide) return;
+
+    const sx = state.image_x;
+    const sy = state.image_y;
+    const scale = state.image_scale;
+
+    const left = sx + Math.min(this.x1, this.x2) * scale;
+    const top = sy + Math.min(this.y1, this.y2) * scale;
+    const width = Math.abs(this.x2 - this.x1) * scale;
+    const height = Math.abs(this.y2 - this.y1) * scale;
+
+    ctx.beginPath();
+    ctx.rect(left, top, width, height);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = this.thickness;
+    ctx.stroke();
   }
 }
