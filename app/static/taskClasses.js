@@ -1,6 +1,6 @@
 
-import { canvas, ctx, state } from "./taskState.js";
-import { vector_add, vector_diff, vector_dot, vector_norm } from "./taskUtils.js";
+import { lctx, uctx, state } from "./taskState.js";
+import { vector_diff, vector_dot, vector_norm } from "./taskUtils.js";
 
 // in an image x is the columns, y is the rows and (0, 0) is at the top left corner
 // the positions for Point and Line are relative to the image
@@ -125,29 +125,29 @@ export class Line {
         [x2, y2] = [aux_x, aux_y];
       }
 
-      ctx.beginPath();
-      ctx.moveTo(state.image_x + (this.px * state.image_scale), state.image_y + (this.py * state.image_scale));
-      ctx.lineTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = this.thickness;
-      ctx.stroke();
+      lctx.beginPath();
+      lctx.moveTo(state.image_x + (this.px * state.image_scale), state.image_y + (this.py * state.image_scale));
+      lctx.lineTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
+      lctx.strokeStyle = this.color;
+      lctx.lineWidth = this.thickness;
+      lctx.stroke();
 
-      ctx.beginPath();
-      ctx.setLineDash([5, 5]);
-      ctx.moveTo(state.image_x + (this.px * state.image_scale), state.image_y + (this.py * state.image_scale));
-      ctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = this.thickness;
-      ctx.stroke();
-      ctx.setLineDash([]);
+      lctx.beginPath();
+      lctx.setLineDash([5, 5]);
+      lctx.moveTo(state.image_x + (this.px * state.image_scale), state.image_y + (this.py * state.image_scale));
+      lctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
+      lctx.strokeStyle = this.color;
+      lctx.lineWidth = this.thickness;
+      lctx.stroke();
+      lctx.setLineDash([]);
     } else {
       // simply draw all the line continuously
-      ctx.beginPath();
-      ctx.moveTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
-      ctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = this.thickness;
-      ctx.stroke();
+      lctx.beginPath();
+      lctx.moveTo(state.image_x + (x1 * state.image_scale), state.image_y + (y1 * state.image_scale));
+      lctx.lineTo(state.image_x + (x2 * state.image_scale), state.image_y + (y2 * state.image_scale));
+      lctx.strokeStyle = this.color;
+      lctx.lineWidth = this.thickness;
+      lctx.stroke();
     }
 
   }
@@ -176,10 +176,10 @@ export class Point {
     this.line_to_vp_y.draw(true);
     this.line_to_vp_z.draw(true);
 
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(state.image_x + (this.x * state.image_scale), state.image_y + (this.y * state.image_scale), this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    uctx.fillStyle = this.color;
+    uctx.beginPath();
+    uctx.arc(state.image_x + (this.x * state.image_scale), state.image_y + (this.y * state.image_scale), this.radius, 0, Math.PI * 2);
+    uctx.fill();
   }
 }
 
@@ -201,12 +201,12 @@ export class ConstructionLine{
   draw(){
     if(this.hide) return;
 
-    ctx.beginPath();
-    ctx.moveTo(state.image_x + (this.x1 * state.image_scale), state.image_y + (this.y1 * state.image_scale));
-    ctx.lineTo(state.image_x + (this.x2 * state.image_scale), state.image_y + (this.y2 * state.image_scale));
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = this.thickness;
-    ctx.stroke();
+    lctx.beginPath();
+    lctx.moveTo(state.image_x + (this.x1 * state.image_scale), state.image_y + (this.y1 * state.image_scale));
+    lctx.lineTo(state.image_x + (this.x2 * state.image_scale), state.image_y + (this.y2 * state.image_scale));
+    lctx.strokeStyle = this.color;
+    lctx.lineWidth = this.thickness;
+    lctx.stroke();
   }
 }
 
@@ -236,10 +236,10 @@ export class BoundingBox {
     const width = Math.abs(this.x2 - this.x1) * scale;
     const height = Math.abs(this.y2 - this.y1) * scale;
 
-    ctx.beginPath();
-    ctx.rect(left, top, width, height);
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = this.thickness;
-    ctx.stroke();
+    lctx.beginPath();
+    lctx.rect(left, top, width, height);
+    lctx.strokeStyle = this.color;
+    lctx.lineWidth = this.thickness;
+    lctx.stroke();
   }
 }

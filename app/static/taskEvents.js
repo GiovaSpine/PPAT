@@ -1,4 +1,4 @@
-import { canvas, state } from "./taskState.js";
+import { ucanvas, state } from "./taskState.js";
 import { draw } from "./taskImageRenderer.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, is_image_clicked } from "./taskUtils.js";
 import { Point, Line } from "./taskClasses.js";
@@ -22,11 +22,11 @@ export function wait_for_click(ignore_first_click = false) {
         return;  // continue to listen if the click is outside the image
       }
 
-      canvas.removeEventListener("click", handler);
+      ucanvas.removeEventListener("click", handler);
       resolve(e);  // return the position (you can choose which one (x, pageX, clientX))
     }
 
-    canvas.addEventListener("click", handler);
+    ucanvas.addEventListener("click", handler);
   });
 }
 
@@ -61,11 +61,11 @@ export function wait_for_click_or_escape(ignore_first_click = false) {
     }
 
     function cleanup() {
-      canvas.removeEventListener("click", click_handler);
+      ucanvas.removeEventListener("click", click_handler);
       window.removeEventListener("keydown", key_handler);
     }
 
-    canvas.addEventListener("click", click_handler);
+    ucanvas.addEventListener("click", click_handler);
     window.addEventListener("keydown", key_handler);
   });
 }
@@ -97,7 +97,7 @@ export function wait_for_enter_or_escape() {
 
 // TEST
 
-canvas.addEventListener("click", function(e){
+ucanvas.addEventListener("click", function(e){
   // function to test the click of the image
   const print = false;
 
@@ -127,7 +127,7 @@ let old_cursur_x = 0;
 let old_cursur_y = 0;
 
 
-canvas.addEventListener("mousedown", function(e) {
+ucanvas.addEventListener("mousedown", function(e) {
   if (e.button === 1) {  // 1 = scrolling wheel
     // start of tracking with scolling wheel
 
@@ -140,7 +140,7 @@ canvas.addEventListener("mousedown", function(e) {
   }
 });
 
-canvas.addEventListener("mousemove", function(e) {
+ucanvas.addEventListener("mousemove", function(e) {
   if (is_tracking) {
 
     // let's see the difference between the current position of the cursur and old_cursur_x, old_cursur_y position
@@ -169,7 +169,7 @@ document.addEventListener("mouseup", function(e) {
 
 // ZOOM AND SCALE
 
-canvas.addEventListener("wheel", function (e) {
+ucanvas.addEventListener("wheel", function (e) {
   e.preventDefault(); // avoid automatic scroll of the page
 
   const factor = 1.1;

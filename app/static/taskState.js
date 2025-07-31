@@ -3,10 +3,18 @@ console.log("Testing task_script.js");
 // the counter of images (exxample: 1/48)
 export const counter = document.getElementById("counter");
 
-export const canvas = document.getElementById("canvas");
-export const ctx = canvas.getContext("2d");
-canvas.width = 1200;
-canvas.height = 780;
+// we have the lower and upper canvas
+// the upper canvas contains the points
+// the lower canvas contains the rest of the things
+export const lcanvas = document.getElementById("lower_canvas");
+export const lctx = lcanvas.getContext("2d");
+export const ucanvas = document.getElementById("upper_canvas");
+export const uctx = ucanvas.getContext("2d");
+lcanvas.width = 1200;
+lcanvas.height = 780;
+ucanvas.width = 1200;
+ucanvas.height = 780;
+
 
 // the message element where we write the various messages for the user
 export const message_element = document.getElementById("message");

@@ -1,4 +1,4 @@
-import { counter, message_element, state, colors, icons_directories } from "./taskState.js";
+import { counter, message_element, ucanvas, state, colors, icons_directories } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
 import { fetch_data, fetch_image_list, fetch_image } from "./taskDataLoader.js";
 import { wait_for_click_or_escape, wait_for_enter_or_escape } from "./taskEvents.js";
@@ -386,12 +386,12 @@ async function add_construction_line(){
   };
 
   // we show dynamically how the construction line can be
-  canvas.addEventListener("mousemove", mousemove_handler);
+  ucanvas.addEventListener("mousemove", mousemove_handler);
 
   const e2 = await wait_for_click_or_escape();
 
   // after the second click remove the dynamic show of the construction line
-  canvas.removeEventListener("mousemove", mousemove_handler);
+  ucanvas.removeEventListener("mousemove", mousemove_handler);
 
   if(e2 == null) {undo_add_construction_line(id); return;}
   const [cursur_x2_canvas, cursur_y2_canvas] = page_pos_to_canvas_pos(e2.pageX, e2.pageY);
@@ -451,12 +451,12 @@ async function add_bounding_box(){
   };
 
   // we show dynamically how the bounding box can be
-  canvas.addEventListener("mousemove", mousemove_handler);
+  ucanvas.addEventListener("mousemove", mousemove_handler);
 
   const e2 = await wait_for_click_or_escape();
 
   // after the second click remove the dynamic show of the bounding box
-  canvas.removeEventListener("mousemove", mousemove_handler);
+  ucanvas.removeEventListener("mousemove", mousemove_handler);
 
   if(e2 == null) {undo_add_bounding_box(); return;}
   const [cursur_x2_canvas, cursur_y2_canvas] = page_pos_to_canvas_pos(e2.pageX, e2.pageY);

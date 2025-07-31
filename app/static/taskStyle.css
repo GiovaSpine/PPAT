@@ -49,10 +49,35 @@
     padding: 4px;
     overflow-y: auto;
 }
- 
-#canvas {
+
+#canvas_wrapper {
+    position: relative;
     width: 1200px;
     height: 780px;
+}
+
+#lower_canvas, #upper_canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1200px;
+    height: 780px;
+}
+
+#lower_canvas {
+    z-index: 1;
+}
+
+#upper_canvas {
+    z-index: 2;
+}
+
+#points_container {
+    border: 1px solid #ccc;
+    width: 278px;
+    height: 758px;
+    padding: 10px;
+    overflow-y: auto;
 }
 
 #points_container {

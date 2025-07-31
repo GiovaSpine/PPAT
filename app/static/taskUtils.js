@@ -1,11 +1,11 @@
-import { canvas, state } from "./taskState.js";
+import { lcanvas, state } from "./taskState.js";
 
 // CANVAS / IMAGE UTILS FUNCTIONS
 
 export function page_pos_to_canvas_pos(x, y){
   // converts a postion relative to the page to a position relative to the canvas
   // it can't return null (because if the canvas was clicked in a certain position, it was clicked on the canvas)
-  const rect = canvas.getBoundingClientRect();
+  const rect = lcanvas.getBoundingClientRect();
 
   // coordinates of x, y inside the canvas
   // because rect.top considers the viewport, we have to add window.scrollY (to obtain absolute position in the page)
@@ -37,7 +37,7 @@ export function is_image_clicked(x, y){
   let x_inside, y_inside;
 
   // am i clicking on the image ?
-  if(state.image_x >= 0 && state.image_x + (state.image.width * state.image_scale) - 1 <= canvas.width - 1){
+  if(state.image_x >= 0 && state.image_x + (state.image.width * state.image_scale) - 1 <= lcanvas.width - 1){
     // the image is inside the canvas
     if(cursur_x_canvas >= state.image_x && cursur_x_canvas <= state.image_x + (state.image.width * state.image_scale)){
       x_inside = true;
@@ -46,7 +46,7 @@ export function is_image_clicked(x, y){
     }
   } else {
     // the image is outside the canvas (we can't trust image_x or image_x + (image.width * image_scale))
-    if(cursur_x_canvas >= Math.max(state.image_x, 0) && cursur_x_canvas <= Math.min(state.image_x + (state.image.width * state.image_scale), canvas.width)){
+    if(cursur_x_canvas >= Math.max(state.image_x, 0) && cursur_x_canvas <= Math.min(state.image_x + (state.image.width * state.image_scale), lcanvas.width)){
       x_inside = true;
     } else {
       x_inside = false;
@@ -54,7 +54,7 @@ export function is_image_clicked(x, y){
   }
 
 
-  if(state.image_y >= 0 && state.image_y + (state.image.height * state.image_scale) - 1 <= canvas.height - 1){
+  if(state.image_y >= 0 && state.image_y + (state.image.height * state.image_scale) - 1 <= lcanvas.height - 1){
     // the image is inside the canvas
     if(cursur_y_canvas >= state.image_y && cursur_y_canvas <= state.image_y + (state.image.height * state.image_scale)){
       y_inside = true;
@@ -63,7 +63,7 @@ export function is_image_clicked(x, y){
     }
   } else {
     // the image is outside the canvas (we can't trust image_y or image_y + (image.height * image_scale) )
-    if(cursur_y_canvas >= Math.max(state.image_y, 0) && cursur_y_canvas <= Math.min(state.image_y + (state.image.height * state.image_scale), canvas.height)){
+    if(cursur_y_canvas >= Math.max(state.image_y, 0) && cursur_y_canvas <= Math.min(state.image_y + (state.image.height * state.image_scale), lcanvas.height)){
       y_inside = true;
     } else {
       y_inside = false;
