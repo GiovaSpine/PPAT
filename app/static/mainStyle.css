@@ -1,3 +1,22 @@
-h1 {
-    color: red;
+* {
+    font-family: Arial, sans-serif;
+}
+
+.header_container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    height: 15px;
+}
+
+.header_container a:first-child,
+.header_container p {
+    font-weight: bold;
+}
+
+.header_container a {
+    margin-right: 10px;
+    text-decoration: none;
+    color: inherit;
 }

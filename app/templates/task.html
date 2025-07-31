@@ -27,7 +27,7 @@
     <div class="top_bar">
         <button type="button" onclick="reset_view()">Reset View</button>
 
-        <div class="controls">
+        <div class="navigation_controls">
             <button id="prev_button" onclick="prev_image()">⬅</button>
             <span id="counter">1 / {{ nimages }}</span>
             <button id="next_button" onclick="next_image()">➡</button>
@@ -51,6 +51,7 @@
             <button type="button" class="work_button" id="vp_z_button" onclick="add_vanishing_point('z')">Add Vanishing Point Z</button>
             <button type="button" class="work_button" id="construction_button" onclick="add_point('construction')">Add Construction Point</button>
             <button type="button" class="work_button" id="label_button" onclick="add_point('label')">Add Label Point</button>
+            <button type="button" class="work_button" id="construction_line_button" onclick="add_construction_line()">Add Construction Line</button>
             <button type="button" class="work_button" id="bb_button" onclick="add_bounding_box()">Add Bounding Box</button>
             <div class="message_container">
                 <p id="message"></p>

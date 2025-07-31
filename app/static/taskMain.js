@@ -1,8 +1,8 @@
-import { counter, message_element, state } from "./taskState.js";
+import { counter, message_element, state, colors, icons_directories } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
 import { fetch_data, fetch_image_list, fetch_image } from "./taskDataLoader.js";
 import { wait_for_click_or_escape, wait_for_enter_or_escape } from "./taskEvents.js";
-import { BoundingBox, Line, Point } from "./taskClasses.js";
+import { BoundingBox, ConstructionLine, Line, Point } from "./taskClasses.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked, vector_normalize } from "./taskUtils.js";
 
 window.next_image = next_image;
@@ -11,12 +11,17 @@ window.reset_view = reset_view;
 
 window.add_vanishing_point = add_vanishing_point;
 window.add_point = add_point;
+window.add_construction_line = add_construction_line;
 window.add_bounding_box = add_bounding_box;
 
 window.delete_vanishing_point = delete_vanishing_point;
 window.change_point_color = change_point_color;
 window.toggle_point_visibility = toggle_point_visibility;
+window.toggle_line_to_vp_visibility = toggle_line_to_vp_visibility;
 window.delete_point = delete_point;
+window.change_c_line_color = change_c_line_color;
+window.toggle_c_line_visibility = toggle_c_line_visibility;
+window.delete_c_line = delete_c_line;
 window.toggle_bounding_box_visibility = toggle_bounding_box_visibility;
 window.delete_bounding_box = delete_bounding_box;
 
@@ -92,13 +97,14 @@ function reset_view(){
 // ========================================================
 
 // points structures
-export let vanishing_points_x = null;  // array of nimages points, that rapresent vanishing points on the x axis
+export let vanishing_points_x = null;  // array of 'nimages' points, that rapresent vanishing points on the x axis
 export let vanishing_points_y = null;
 export let vanishing_points_z = null;
-export let construction_points = null;  // array of nimages array of 100 construction points. Construction points are used to select label points precisely
-export let label_points = null;  // array of nimages array of npoints label points. These are the actual label for the model
-export let bounding_boxes = null;  // array of nimages bounding boxes
-export let temp_lines = null;  // array of nimages lists that containes temporary lines to draw
+export let construction_points = null;  // array of 'nimages' array of  'nconstructionpoints' construction points. Construction points are used to select label points precisely
+export let label_points = null;  // array of 'nimages' array of 'npoints' label points. These are the actual labels for the model
+export let construction_lines = null;  // array of 'nimages' array of  'nconstructionlines' construction lines
+export let bounding_boxes = null;  // array of 'nimages' bounding boxes
+export let temp_lines = null;  // array of 'nimages' lists that containes temporary lines to draw
 
 
 function initialize_points_structures(){
@@ -118,6 +124,12 @@ function initialize_points_structures(){
   for(let i = 0; i < state.nimages; i++){
     // for an image there are exactly npoints points
     label_points[i] = new Array(state.npoints);
+  }
+
+  construction_lines = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++){
+    // for an image there are max nconstructionpoints construction points
+    construction_lines[i] = new Array(state.nconstructionlines);
   }
 
   bounding_boxes = new Array(state.nimages);
@@ -148,6 +160,7 @@ function set_all_buttons_enabled(enabled){
   document.getElementById("vp_z_button").disabled = !enabled;
   document.getElementById("construction_button").disabled = !enabled;
   document.getElementById("label_button").disabled = !enabled;
+  document.getElementById("construction_line_button").disabled = !enabled;
   document.getElementById("bb_button").disabled = !enabled;
 
   // set the buttons of the varius elements in points_container
@@ -178,7 +191,7 @@ async function add_vanishing_point(type_of_vp){
     set_all_buttons_enabled(true);  // reactivate all the buttons
   }
 
-  const color = (type_of_vp == "x") ? "red" : (type_of_vp == "y") ? "green" :  "blue";
+  const color = colors[type_of_vp];
 
   // let's wait the user to enter the first two points
   const e1 = await wait_for_click_or_escape();
@@ -244,7 +257,6 @@ async function add_vanishing_point(type_of_vp){
 }
 
 
-
 async function add_point(type_of_point){
 
   // check if there user added the vanishing points for every axis
@@ -272,12 +284,8 @@ async function add_point(type_of_point){
     message_element.textContent = message;
     return;
   }
-  
-  set_all_buttons_enabled(false);  // deactivate all the buttons
 
-  const e = await wait_for_click_or_escape();
-  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
-
+  // check if the user added to many points
   // we need to find an id for the point
   // we look at the first empty space in the corrisponding array
   let id = 0;
@@ -285,25 +293,38 @@ async function add_point(type_of_point){
     for(; id < state.npoints; id++){
       if(label_points[state.index][id] == null) break;
     }
+    if(id >= state.npoints){
+      message_element.textContent = `Warning: you have reached tha max amount of label points: ${state.npoints}`;
+      return;
+    }
   } else if(type_of_point == "construction"){
     for(; id < state.nconstructionpoints; id++){
       if(construction_points[state.index][id] == null) break;
     }
+    if(id >= state.nconstructionpoints){
+      message_element.textContent = `Warning: you have reached tha max amount of construction points: ${state.nconstructionpoints}`;
+      return;
+    }
   } else console.log("Impossible to have this option in add_point");
+  
+  set_all_buttons_enabled(false);  // deactivate all the buttons
+
+  const e = await wait_for_click_or_escape();
+  if(e == null) {message_element.textContent = ""; set_all_buttons_enabled(true); return;}
 
   // let's make the point
   const [cursur_x_canvas, cursur_y_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
   const [cursur_x_image, cursur_y_image] = canvas_pos_to_image_pos(cursur_x_canvas, cursur_y_canvas);
-  const point = new Point(cursur_x_image, cursur_y_image, (type_of_point == "label") ? "blue" : "gray");
+  const point = new Point(cursur_x_image, cursur_y_image, colors[type_of_point]);
 
   // we need to add the perspective (the lines to the vanishing points)
   // let's calculate the vector from the point to the vanishing points (it's just point - vanishing point, all normalized)
   const dir_p_vp_x = vector_normalize(vector_diff([vanishing_points_x[state.index][0], vanishing_points_x[state.index][1]], [point.x, point.y]));
   const dir_p_vp_y = vector_normalize(vector_diff([vanishing_points_y[state.index][0], vanishing_points_y[state.index][1]], [point.x, point.y]));
   const dir_p_vp_z = vector_normalize(vector_diff([vanishing_points_z[state.index][0], vanishing_points_z[state.index][1]], [point.x, point.y]));
-  point.line_to_vp_x = new Line(point.x, point.y, dir_p_vp_x[0], dir_p_vp_x[1] , "red");
-  point.line_to_vp_y = new Line(point.x, point.y, dir_p_vp_y[0], dir_p_vp_y[1] , "green");
-  point.line_to_vp_z = new Line(point.x, point.y, dir_p_vp_z[0], dir_p_vp_z[1] , "blue");
+  point.line_to_vp_x = new Line(point.x, point.y, dir_p_vp_x[0], dir_p_vp_x[1] , colors["x"]);
+  point.line_to_vp_y = new Line(point.x, point.y, dir_p_vp_y[0], dir_p_vp_y[1] , colors["y"]);
+  point.line_to_vp_z = new Line(point.x, point.y, dir_p_vp_z[0], dir_p_vp_z[1] , colors["z"]);
 
   // let's add the point to the corresponding array
   if(type_of_point == "label"){
@@ -318,6 +339,78 @@ async function add_point(type_of_point){
   set_all_buttons_enabled(true);  // reactivate all the buttons
 }
 
+
+async function add_construction_line(){
+  // check if the user added to many construction lines
+  // we need to find an id for the construction line
+  // we look at the first empty space in the construction_lines array
+  let id = 0;
+  for(; id < state.nconstructionlines; id++){
+    if(construction_lines[state.index][id] == null) break;
+  }
+  if(id >= state.nconstructionlines){
+    // we have reached the max amount of construction lines
+    message_element.textContent = `Warning: you have reached tha max amount of construction lines: ${state.nconstructionlines}`;
+    return;
+  }
+
+  message_element.textContent = "Select two points to add a construction line; press enter to confirm the selection or esc to undo the operation ";
+
+  set_all_buttons_enabled(false);  // deactivate all the buttons
+
+  function undo_add_construction_line(id){
+    message_element.textContent = "";
+    construction_lines[state.index][id] = null;
+    draw();
+    set_all_buttons_enabled(true);  // reactivate all the buttons
+  }
+
+  // let's wait the user to enter the two points
+  const e1 = await wait_for_click_or_escape();
+  if(e1 == null) {undo_add_construction_line(id); return;}
+  const [cursur_x1_canvas, cursur_y1_canvas] = page_pos_to_canvas_pos(e1.pageX, e1.pageY);
+  const [cursur_x1_image, cursur_y1_image] = canvas_pos_to_image_pos(cursur_x1_canvas, cursur_y1_canvas);
+
+
+  const mousemove_handler = function(e) {
+    if(is_image_clicked(e.pageX, e.pageY)){
+      const [cursur_x0_canvas, cursur_y0_canvas] = page_pos_to_canvas_pos(e.pageX, e.pageY);
+      const [cursur_x0_image, cursur_y0_image] = canvas_pos_to_image_pos(cursur_x0_canvas, cursur_y0_canvas);
+
+      // let's create the construction line
+      const contruction_line = new ConstructionLine(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, colors["construction_line"]);
+      // let's add it already in construction_lines (we might remove it later)
+      construction_lines[state.index][id] = contruction_line;
+      draw();
+    }
+  };
+
+  // we show dynamically how the construction line can be
+  canvas.addEventListener("mousemove", mousemove_handler);
+
+  const e2 = await wait_for_click_or_escape();
+
+  // after the second click remove the dynamic show of the construction line
+  canvas.removeEventListener("mousemove", mousemove_handler);
+
+  if(e2 == null) {undo_add_construction_line(id); return;}
+  const [cursur_x2_canvas, cursur_y2_canvas] = page_pos_to_canvas_pos(e2.pageX, e2.pageY);
+  const [cursur_x2_image, cursur_y2_image] = canvas_pos_to_image_pos(cursur_x2_canvas, cursur_y2_canvas);
+
+  const contruction_line = new ConstructionLine(cursur_x1_image, cursur_y1_image, cursur_x2_image, cursur_y2_image, colors["construction_line"]);
+  // let's add the contruction_line in construction_lines, to draw it
+  construction_lines[state.index][id] = contruction_line;
+  draw();
+
+  // we wait the user to press enter
+  const is_enter_pressed = await wait_for_enter_or_escape();
+  if(is_enter_pressed == null) {undo_add_construction_line(id); return;}
+
+  message_element.textContent = "";
+  update_points_container();
+  draw();
+  set_all_buttons_enabled(true);  // reactivate all the buttons
+}
 
 
 async function add_bounding_box(){
@@ -350,7 +443,7 @@ async function add_bounding_box(){
       const [cursur_x0_image, cursur_y0_image] = canvas_pos_to_image_pos(cursur_x0_canvas, cursur_y0_canvas);
 
       // let's create the bounding box
-      const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, "red");
+      const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, colors["bounding_box"]);
       // let's add it already in bounding_boxes (we might remove it later)
       bounding_boxes[state.index] = bounding_box;
       draw();
@@ -370,7 +463,7 @@ async function add_bounding_box(){
   const [cursur_x2_image, cursur_y2_image] = canvas_pos_to_image_pos(cursur_x2_canvas, cursur_y2_canvas);
 
   // let's create the bounding box
-  const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x2_image, cursur_y2_image, "red");
+  const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x2_image, cursur_y2_image, colors["bounding_box"]);
   // let's add it already in bounding_boxes (we might remove it later)
   bounding_boxes[state.index] = bounding_box;
   draw();
@@ -386,7 +479,6 @@ async function add_bounding_box(){
 }
 
 
-
 // ========================================================
 
 // POINTS CONTAINER
@@ -400,6 +492,9 @@ function update_points_container(){
   }
 
   // now we create the new childs
+  // we have to look at some properties of the points, lines and bounding boxes
+  // like "hide" to see which type of eye icon we have to use (hidder or not)
+  // and "color" so that we can color the title of the point or line with the same color
 
   // creation of vanishing points elements
   if(vanishing_points_x[state.index] != null){
@@ -409,7 +504,9 @@ function update_points_container(){
     point_div.innerHTML = `
       <span>Vanishing Point X</span>
       <div class="controls">
-        <button onclick="delete_vanishing_point('x')">🗑️</button>
+        <button onclick="delete_vanishing_point('x')">
+          <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+        </button>
       </div>
     `;
     container.appendChild(point_div);
@@ -422,7 +519,9 @@ function update_points_container(){
     point_div.innerHTML = `
       <span>Vanishing Point Y</span>
       <div class="controls">
-        <button onclick="delete_vanishing_point('y')">🗑️</button>
+        <button onclick="delete_vanishing_point('y')">
+          <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+        </button>
       </div>
     `;
     container.appendChild(point_div);
@@ -435,7 +534,9 @@ function update_points_container(){
     point_div.innerHTML = `
       <span>Vanishing Point Z</span>
       <div class="controls">
-        <button onclick="delete_vanishing_point('z')">🗑️</button>
+        <button onclick="delete_vanishing_point('z')">
+          <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+        </button>
       </div>
     `;
     container.appendChild(point_div);
@@ -449,12 +550,32 @@ function update_points_container(){
       point_div.className = "construction_point_item";
       point_div.id = `construction_point_${i}`;
 
+      const eye_icon_directory = (construction_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+      const eye_x_icon_directory = (construction_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
+      const eye_y_icon_directory = (construction_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
+      const eye_z_icon_directory = (construction_points[state.index][i].line_to_vp_z.hide) ? icons_directories["eye-hidden-z"] : icons_directories["eye-z"];
+
       point_div.innerHTML = `
-        <span>Construction Point ${i}</span>
+        <span style="color: ${construction_points[state.index][i].color}">Construction Point ${i}</span>
         <div class="controls">
-          <button onclick="change_point_color(${i}, 'construction')">🎨</button>
-          <button onclick="toggle_point_visibility(${i}, 'construction', this)">👁️</button>
-          <button onclick="delete_point(${i}, 'construction')">🗑️</button>
+          <button onclick="change_point_color(${i}, 'construction')">
+            <img src="${icons_directories["artist-palette"]}" alt="Artist Palette" class="icon_button">
+          </button>
+          <button onclick="toggle_point_visibility(${i}, 'construction')">
+            <img src="${eye_icon_directory}" alt="Eye" class="icon_button">
+          </button>
+          <button onclick="delete_point(${i}, 'construction')">
+            <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+          </button>
+          <button onclick="toggle_line_to_vp_visibility(${i}, 'construction', 'x')">
+            <img src="${eye_x_icon_directory}" alt="Eye X" class="icon_button">
+          </button>
+          <button onclick="toggle_line_to_vp_visibility(${i}, 'construction', 'y')">
+            <img src="${eye_y_icon_directory}" alt="Eye Y" class="icon_button">
+          </button>
+          <button onclick="toggle_line_to_vp_visibility(${i}, 'construction', 'z')">
+            <img src="${eye_z_icon_directory}" alt="Eye Z" class="icon_button">
+          </button>
         </div>
       `;
 
@@ -471,12 +592,32 @@ function update_points_container(){
       point_div.className = "label_point_item";
       point_div.id = `label_point_${i}`;
 
+      const eye_icon_directory = (label_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+      const eye_x_icon_directory = (label_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
+      const eye_y_icon_directory = (label_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
+      const eye_z_icon_directory = (label_points[state.index][i].line_to_vp_z.hide) ? icons_directories["eye-hidden-z"] : icons_directories["eye-z"];
+
       point_div.innerHTML = `
-        <span>Label Point ${i}</span>
+        <span style="color: ${label_points[state.index][i].color}">Label Point ${i}</span>
         <div class="controls">
-          <button onclick="change_point_color(${i}, 'label')">🎨</button>
-          <button onclick="toggle_point_visibility(${i}, 'label', this)">👁️</button>
-          <button onclick="delete_point(${i}, 'label')">🗑️</button>
+          <button onclick="change_point_color(${i}, 'label')">
+            <img src="${icons_directories["artist-palette"]}" alt="Artist Palette" class="icon_button">
+          </button>
+          <button onclick="toggle_point_visibility(${i}, 'label')">
+            <img src="${eye_icon_directory}" alt="Eye" class="icon_button">
+          </button>
+          <button onclick="delete_point(${i}, 'label')">
+            <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+          </button>
+          <button onclick="toggle_line_to_vp_visibility(${i}, 'label', 'x')">
+             <img src="${eye_x_icon_directory}" alt="Eye X" class="icon_button">
+          </button>
+          <button onclick="toggle_line_to_vp_visibility(${i}, 'label', 'y')">
+             <img src="${eye_y_icon_directory}" alt="Eye Y" class="icon_button">
+          </button>
+          <button onclick="toggle_line_to_vp_visibility(${i}, 'label', 'z')">
+             <img src="${eye_z_icon_directory}" alt="Eye Z" class="icon_button">
+          </button>
         </div>
       `;
 
@@ -485,17 +626,53 @@ function update_points_container(){
     
   }
 
+  // creation of construction lines
+  for(let i = 0; i < state.nconstructionlines; i++){
+
+    if(construction_lines[state.index][i] != null){
+      const point_div = document.createElement("div");
+      point_div.className = "construction_line_item";
+      point_div.id = `construction_line_${i}`;
+
+      const eye_icon_directory = (construction_lines[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+
+      point_div.innerHTML = `
+        <span style="color: ${construction_lines[state.index][i].color}">Construction Line ${i}</span>
+        <div class="controls">
+          <button onclick="change_c_line_color(${i})">
+            <img src="${icons_directories["artist-palette"]}" alt="Artist Palette" class="icon_button">
+          </button>
+          <button onclick="toggle_c_line_visibility(${i})">
+            <img src="${eye_icon_directory}" alt="Eye" class="icon_button">
+          </button>
+          <button onclick="delete_c_line(${i})">
+            <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+          </button>
+        </div>
+      `;
+
+      container.appendChild(point_div);
+    }
+
+  }
+
   // creation of bounding box element
   if(bounding_boxes[state.index] != null){
     const point_div = document.createElement("div");
     point_div.className = "bounding_box_item";
     point_div.id = `bounding_box`;
 
+    const eye_icon_directory = (bounding_boxes[state.index].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+
     point_div.innerHTML = `
       <span>Bounding Box</span>
       <div class="controls">
-        <button onclick="toggle_bounding_box_visibility(this)">👁️</button>
-        <button onclick="delete_bounding_box()">🗑️</button>
+        <button onclick="toggle_bounding_box_visibility()">
+          <img src="${eye_icon_directory}" alt="Eye" class="icon_button">
+        </button>
+        <button onclick="delete_bounding_box()">
+          <img src="${icons_directories["trash"]}" alt="Delete" class="icon_button">
+        </button>
       </div>
     `;
 
@@ -506,6 +683,7 @@ function update_points_container(){
 
 
 // Functions associated with the buttons in the points container
+
 function delete_vanishing_point(type_of_vp){
   // but what happens to the points alreay present ? we have to delete all of them
   for(let i = 0; i < state.nconstructionpoints; i++){
@@ -527,41 +705,66 @@ function delete_vanishing_point(type_of_vp){
   update_points_container();
 }
 
+// ------------------------------------
+
 function change_point_color(id, type_of_point) {
-
   if(type_of_point == 'label'){
-    const div = document.getElementById(`label_point_${id}`);
-    const colors = ["red", "blue", "green", "orange", "black"];
-    const current = div.style.color || "black";
-    const next = colors[(colors.indexOf(current) + 1) % colors.length];
-    div.style.color = next;
-
+    const local_colors = colors["label_points_possibile_colors"];
+    const current = label_points[state.index][id].color;
+    const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
     label_points[state.index][id].color = next;
   } else if(type_of_point == 'construction') {
-    const div = document.getElementById(`construction_point_${id}`);
-    const colors = ["red", "blue", "green", "orange", "black"];
-    const current = div.style.color || "black";
-    const next = colors[(colors.indexOf(current) + 1) % colors.length];
-    div.style.color = next;
-
+    const local_colors = colors["construction_points_possibile_colors"];
+    const current = construction_points[state.index][id].color;
+    const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
     construction_points[state.index][id].color = next;
   } else console.log("Impossible to have this option (in the functions of points container)");
   draw();
+  update_points_container();
 }
 
-function toggle_point_visibility(id, type_of_point, button) {
-  let hide;
-
+function toggle_point_visibility(id, type_of_point) {
   if(type_of_point == 'label'){
-    hide = label_points[state.index][id].hide;
     label_points[state.index][id].hide = !label_points[state.index][id].hide;;
   } else if(type_of_point == 'construction') {
-    hide = construction_points[state.index][id].hide;
     construction_points[state.index][id].hide = !construction_points[state.index][id].hide;
   } else console.log("Impossible to have this option (in the functions of points container)");
 
-  button.textContent = hide ? "👁️" : "👁️‍🗨️";
   draw();
+  update_points_container();
+}
+
+function toggle_line_to_vp_visibility(id, type_of_point, type_of_vp){
+  if(type_of_point == 'label'){
+
+    if(type_of_vp == 'x'){
+      label_points[state.index][id].line_to_vp_x.hide = !label_points[state.index][id].line_to_vp_x.hide;
+    }
+    else if(type_of_vp == 'y'){
+      label_points[state.index][id].line_to_vp_y.hide = !label_points[state.index][id].line_to_vp_y.hide;
+    }
+    else if(type_of_vp == 'z'){
+      label_points[state.index][id].line_to_vp_z.hide = !label_points[state.index][id].line_to_vp_z.hide;
+    }
+    else console.log("Impossible to have this option (in the functions of points container)");
+    
+  } else if(type_of_point == 'construction') {
+
+    if(type_of_vp == 'x'){
+      construction_points[state.index][id].line_to_vp_x.hide = !construction_points[state.index][id].line_to_vp_x.hide;
+    }
+    else if(type_of_vp == 'y'){
+      construction_points[state.index][id].line_to_vp_y.hide = !construction_points[state.index][id].line_to_vp_y.hide;
+    }
+    else if(type_of_vp == 'z'){
+      construction_points[state.index][id].line_to_vp_z.hide = !construction_points[state.index][id].line_to_vp_z.hide;
+    }
+    else console.log("Impossible to have this option (in the functions of points container)");
+
+  } else console.log("Impossible to have this option (in the functions of points container)");
+
+  draw();
+  update_points_container();
 }
 
 function delete_point(id, type_of_point) {
@@ -575,13 +778,36 @@ function delete_point(id, type_of_point) {
   update_points_container();
 }
 
+// ------------------------------------
 
-function toggle_bounding_box_visibility(button){
-  let hide = bounding_boxes[state.index].hide;
+function change_c_line_color(id){
+  const local_colors = colors["construction_lines_possibile_colors"];
+  const current = construction_lines[state.index][id].color;
+  const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
+  construction_lines[state.index][id].color = next;
+  draw();
+  update_points_container();
+}
+
+function toggle_c_line_visibility(id){
+  construction_lines[state.index][id].hide = !construction_lines[state.index][id].hide;
+  draw();
+  update_points_container();
+}
+
+function delete_c_line(id){
+  construction_lines[state.index][id] = null;
+  draw();
+  update_points_container();
+}
+
+// ------------------------------------
+
+function toggle_bounding_box_visibility(){
   bounding_boxes[state.index].hide = !bounding_boxes[state.index].hide;
 
-  button.textContent = hide ? "👁️" : "👁️‍🗨️";
   draw();
+  update_points_container();
 }
 
 function delete_bounding_box(){

@@ -1,6 +1,6 @@
 import { ctx, canvas, state } from "./taskState.js";
 import { Line, Point } from "./taskClasses.js" ;
-import { bounding_boxes, construction_points, label_points, temp_lines } from "./taskMain.js";
+import { bounding_boxes, construction_lines, construction_points, label_points, temp_lines } from "./taskMain.js";
 
 export function draw(){
   ctx.fillStyle = "rgb(230, 230, 230)";
@@ -15,11 +15,15 @@ export function draw(){
   // we need to draw the bounding box
   if(bounding_boxes[state.index] != null) bounding_boxes[state.index].draw();
 
+  // we need to draw the construction lines
+  for(let i = 0; i < state.nconstructionlines; i++){
+    if(construction_lines[state.index][i] != null) construction_lines[state.index][i].draw();
+  }
+
   // we need to draw the varius points...
   for(let i = 0; i < state.nconstructionpoints; i++){
     if(construction_points[state.index][i] != null) construction_points[state.index][i].draw();
   }
-
   for(let i = 0; i < state.nimages; i++){
     if(label_points[state.index][i] != null) label_points[state.index][i].draw();
   }
