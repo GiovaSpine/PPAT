@@ -1,8 +1,18 @@
 import { ucanvas, state } from "./taskState.js";
 import { draw } from "./taskImageRenderer.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, is_image_clicked } from "./taskUtils.js";
-import { Point, Line } from "./taskClasses.js";
 
+
+// BEFORE DELETING THE TASK SERVER SIDE WE HAVE TO DELETE THE BROWSER SESSION
+
+document.getElementById("delete_form").addEventListener("submit", function(event) {
+    // delete the session in the browser
+    sessionStorage.clear();
+});
+
+// ========================================================
+
+// VARIOUS WAIT FOR CLICK USED DURING OPERATIONS
 
 export function wait_for_click(ignore_first_click = false) {
   return new Promise((resolve) => {

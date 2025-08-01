@@ -43,7 +43,7 @@ export const state = {
   nconstructionpoints: 50,  // the max number of construction points
   nconstructionlines: 50,  // the max number of construction lines
 
-  index: 0,  // the index of the current image shown in the page
+  index: parseInt(sessionStorage.getItem('index') || "0"),  // the index of the current image shown in the page
 
   image: null,  // the image corresponding to the index
   image_x: 0,
