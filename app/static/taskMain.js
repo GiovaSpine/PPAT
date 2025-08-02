@@ -19,6 +19,7 @@ window.change_point_color = change_point_color;
 window.toggle_point_visibility = toggle_point_visibility;
 window.toggle_line_to_vp_visibility = toggle_line_to_vp_visibility;
 window.delete_point = delete_point;
+window.toggle_keypoint_visibility = toggle_keypoint_visibility;
 window.change_c_line_color = change_c_line_color;
 window.toggle_c_line_visibility = toggle_c_line_visibility;
 window.delete_c_line = delete_c_line;
@@ -655,6 +656,7 @@ function update_points_container(){
           <button onclick="toggle_line_to_vp_visibility(${i}, 'label', 'z')">
              <img src="${eye_z_icon_directory}" alt="Eye Z" class="icon_button">
           </button>
+          <button id="keypoint_visibility_button" onclick="toggle_keypoint_visibility(${i})">${label_points[state.index][i].visibility}</button>
         </div>
       `;
 
@@ -833,6 +835,16 @@ function delete_point(id, type_of_point) {
   sessionStorage.setItem('label_points', JSON.stringify(label_points));
 
   draw();
+  update_points_container();
+}
+
+function toggle_keypoint_visibility(id){
+  let visibility = label_points[state.index][id].visibility;
+  visibility++;
+  if(visibility > 2) visibility = 0;
+  label_points[state.index][id].visibility = visibility;
+  // let's save the change in the session
+  sessionStorage.setItem('label_points', JSON.stringify(label_points));
   update_points_container();
 }
 

@@ -98,6 +98,7 @@ export function load_points_structure_from_session(key){
           // we have to rebuild the objects based on what was saved in the session
           label_points[i][j] = new Point(item[i][j].x, item[i][j].y, item[i][j].color);
           label_points[i][j].hide = item[i][j].hide;
+          label_points[i][j].visibility = item[i][j].visibility;
           label_points[i][j].line_to_vp_x = new Line(item[i][j].line_to_vp_x.px, item[i][j].line_to_vp_x.py, item[i][j].line_to_vp_x.dx, item[i][j].line_to_vp_x.dy, item[i][j].line_to_vp_x.color);
           label_points[i][j].line_to_vp_x.hide = item[i][j].line_to_vp_x.hide;
           label_points[i][j].line_to_vp_y = new Line(item[i][j].line_to_vp_y.px, item[i][j].line_to_vp_y.py, item[i][j].line_to_vp_y.dx, item[i][j].line_to_vp_y.dy, item[i][j].line_to_vp_y.color);

@@ -160,6 +160,8 @@ export class Point {
     this.x = x;
     this.y = y;
 
+    this.visibility = 2;  // the visibility of the keypoint (0 not present; 1 not visibile; 2 visible)
+
     this.hide = false;  // wheter the point is visibile or hidden
     this.radius = 8;
     this.color = color;
