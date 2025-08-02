@@ -1,6 +1,7 @@
-import { ucanvas, state } from "./taskState.js";
+import { ucanvas, state, colors } from "./taskState.js";
 import { draw } from "./taskImageRenderer.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, is_image_clicked } from "./taskUtils.js";
+import {construction_points, label_points, construction_lines} from "./taskMain.js"
 
 
 // BEFORE DELETING THE TASK SERVER SIDE WE HAVE TO DELETE THE BROWSER SESSION
@@ -101,6 +102,65 @@ export function wait_for_enter_or_escape() {
   });
 }
 
+// ========================================================
+
+// HIGHLIGHT POINT AND LINES WHEN HOVERING
+
+function extract_index_from_point_div_id(point_div_id) {
+  const match = point_div_id.match(/_(\d+)$/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+export function handle_mouse_highlight_enter(event) {
+  const target = event.target.closest(".construction_point_item, .label_point_item, .construction_line_item");
+  if (!target) return;
+
+  const point_div_id = target.id;
+  let type = "";
+
+  // let's find the id
+  const id = extract_index_from_point_div_id(point_div_id);
+
+  if (point_div_id.startsWith("construction_point_")) {
+    type = "construction_points";
+    construction_points[state.index][id].highlight = true;
+  } else if (point_div_id.startsWith("label_point_")) {
+    type = "label_points";
+    label_points[state.index][id].highlight = true;
+  } else if (point_div_id.startsWith("construction_line_")) {
+    type = "construction_lines";
+    construction_lines[state.index][id].highlight = true;
+  }
+
+  // console.log("in", type, id);
+  draw();
+}
+
+
+export function handle_mouse_highlight_leave(event) {
+  const target = event.target.closest(".construction_point_item, .label_point_item, .construction_line_item");
+  if (!target) return;
+
+  const point_div_id = target.id;
+  let type = "";
+
+  // let's find the id
+  const id = extract_index_from_point_div_id(point_div_id);
+
+  if (point_div_id.startsWith("construction_point_")) {
+    type = "construction_points";
+    construction_points[state.index][id].highlight = false;
+  } else if (point_div_id.startsWith("label_point_")) {
+    type = "label_points";
+    label_points[state.index][id].highlight = false;
+  } else if (point_div_id.startsWith("construction_line_")) {
+    type = "construction_lines";
+    construction_lines[state.index][id].highlight = false;
+  }
+
+  // console.log("out", type, id);
+  draw();
+}
 
 
 // ========================================================

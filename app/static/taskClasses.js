@@ -1,5 +1,5 @@
 
-import { lctx, uctx, state } from "./taskState.js";
+import { lctx, uctx, state, colors } from "./taskState.js";
 import { vector_diff, vector_dot, vector_norm } from "./taskUtils.js";
 
 // in an image x is the columns, y is the rows and (0, 0) is at the top left corner
@@ -164,6 +164,7 @@ export class Point {
 
     this.hide = false;  // wheter the point is visibile or hidden
     this.radius = 8;
+    this.highlight = false;  // we need it to know if we have to color the point with the highlight color
     this.color = color;
     
     this.line_to_vp_x;  // line to the vanishing point for the x axis
@@ -178,7 +179,7 @@ export class Point {
     this.line_to_vp_y.draw(true);
     this.line_to_vp_z.draw(true);
 
-    uctx.fillStyle = this.color;
+    uctx.fillStyle = (this.highlight) ? colors["highlight"] : this.color;
     uctx.beginPath();
     uctx.arc(state.image_x + (this.x * state.image_scale), state.image_y + (this.y * state.image_scale), this.radius, 0, Math.PI * 2);
     uctx.fill();
@@ -197,6 +198,7 @@ export class ConstructionLine{
 
     this.hide = false;  // wheter the line is visibile or hidden
     this.thickness = 2;  // the thickness of the drawing of the line
+    this.highlight = false;  // we need it to know if we have to color the line with the highlight color
     this.color = color;
   }
 
@@ -206,7 +208,7 @@ export class ConstructionLine{
     lctx.beginPath();
     lctx.moveTo(state.image_x + (this.x1 * state.image_scale), state.image_y + (this.y1 * state.image_scale));
     lctx.lineTo(state.image_x + (this.x2 * state.image_scale), state.image_y + (this.y2 * state.image_scale));
-    lctx.strokeStyle = this.color;
+    lctx.strokeStyle = (this.highlight) ? colors["highlight"] : this.color;
     lctx.lineWidth = this.thickness;
     lctx.stroke();
   }

@@ -1,7 +1,7 @@
 import { counter, message_element, ucanvas, state, colors, icons_directories } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
 import { fetch_data, fetch_image_list, fetch_image, load_points_structure_from_session } from "./taskDataLoader.js";
-import { wait_for_click_or_escape, wait_for_enter_or_escape } from "./taskEvents.js";
+import { wait_for_click_or_escape, wait_for_enter_or_escape, handle_mouse_highlight_enter, handle_mouse_highlight_leave } from "./taskEvents.js";
 import { BoundingBox, ConstructionLine, Line, Point } from "./taskClasses.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked, vector_normalize } from "./taskUtils.js";
 
@@ -588,6 +588,10 @@ function update_points_container(){
       point_div.className = "construction_point_item";
       point_div.id = `construction_point_${i}`;
 
+      // we need those to highlight
+      point_div.addEventListener("mouseenter", handle_mouse_highlight_enter);
+      point_div.addEventListener("mouseleave", handle_mouse_highlight_leave);
+
       const eye_icon_directory = (construction_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
       const eye_x_icon_directory = (construction_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
       const eye_y_icon_directory = (construction_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
@@ -629,6 +633,10 @@ function update_points_container(){
       const point_div = document.createElement("div");
       point_div.className = "label_point_item";
       point_div.id = `label_point_${i}`;
+
+      // we need those to highlight
+      point_div.addEventListener("mouseenter", handle_mouse_highlight_enter);
+      point_div.addEventListener("mouseleave", handle_mouse_highlight_leave);
 
       const eye_icon_directory = (label_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
       const eye_x_icon_directory = (label_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
@@ -672,6 +680,10 @@ function update_points_container(){
       const point_div = document.createElement("div");
       point_div.className = "construction_line_item";
       point_div.id = `construction_line_${i}`;
+
+      // we need those to highlight
+      point_div.addEventListener("mouseenter", handle_mouse_highlight_enter);
+      point_div.addEventListener("mouseleave", handle_mouse_highlight_leave);
 
       const eye_icon_directory = (construction_lines[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
 
@@ -758,11 +770,13 @@ function change_point_color(id, type_of_point) {
     const local_colors = colors["label_points_possibile_colors"];
     const current = label_points[state.index][id].color;
     const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
+    label_points[state.index][id].old_color = next;
     label_points[state.index][id].color = next;
   } else if(type_of_point == 'construction') {
     const local_colors = colors["construction_points_possibile_colors"];
     const current = construction_points[state.index][id].color;
     const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
+    construction_points[state.index][id].old_color = next;
     construction_points[state.index][id].color = next;
   } else console.log("Impossible to have this option (in the functions of points container)");
   // let's save the change in the session
@@ -854,6 +868,7 @@ function change_c_line_color(id){
   const local_colors = colors["construction_lines_possibile_colors"];
   const current = construction_lines[state.index][id].color;
   const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
+  construction_lines[state.index][id].old_color = next;
   construction_lines[state.index][id].color = next;
   // let's save the change in the session
   sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
