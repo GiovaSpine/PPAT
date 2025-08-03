@@ -64,6 +64,8 @@ export function save_task_annotations_to_session(){
     "bounding_boxes": points_structures.bounding_boxes[state.index]
   };
 
+  console.log(points_structures.vanishing_points_x[state.index]);
+
   const task_annotations_name = `taskAnnotations_${state.index}`;
 
   sessionStorage.setItem(task_annotations_name, JSON.stringify(task_annotations));
@@ -167,37 +169,45 @@ export function load_task_annotations_from_session(){
 
 
 export function save_task_annotations_to_server(){
-  const annotations = {
-    "vanishing_points_x": points_structures.vanishing_points_x,
-    "vanishing_points_y": points_structures.vanishing_points_y,
-    "vanishing_points_z": points_structures.vanishing_points_z,
-    "construction_points": points_structures.construction_points,
-    "label_points": points_structures.label_points,
-    "construction_lines": points_structures.construction_lines,
-    "bounding_boxes": points_structures.bounding_boxes,
-  };
+  // we have to save task annotations from the session
+  // because maybe the user already saved annotations for index 1 and stops completely
+  // to reach index 1 (so in never updates those points structures)
 
-  // Invio POST a Flask
-  fetch(save_task_annotations_url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(annotations)
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error("Error in save_task_annotations");
+  for(let i = 0; i < state.nimages; i++){
+    // for this index there are task annotations in the session ?
+    if (sessionStorage.getItem(`taskAnnotations_${i}`) != null) {
+        const task_annotations = JSON.parse(sessionStorage.getItem(`taskAnnotations_${i}`))
+
+        const data = {
+          "index": i,
+          "task_annotations": task_annotations
+        }
+
+        // POST send to flask
+        fetch(save_task_annotations_url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("Error in save_task_annotations");
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log("Server response", data);
+        })
+        .catch(error => {
+          console.error("Error:", error);
+        });
+      }
+
     }
-    return response.json();
-  })
-  .then(data => {
-    console.log("Server response", data);
-  })
-  .catch(error => {
-    console.error("Error:", error);
-  });
-}
+
+  }
 
 
 export async function load_task_annotations_from_server() {
@@ -211,33 +221,27 @@ export async function load_task_annotations_from_server() {
 
       // if file doesn't exist
       if (response.status === 404) {
-        console.warn(`File not found (it's possible that the user never saved): ${filename}`);
-        // we can already return, because right now it annotations are saved on the server, they are all saved
-        // (if one of them is not present, no other else is present)
-        return;
-      } 
-      // other errors
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status} on ${filename}`);
+        console.warn(`File not found (probably not yet saved): ${filename}`);
+      } else {
+        // the file exists
+        const task_annotations = await response.json();
+
+        // let's save these structure in the session
+        // so we use the same mechanism to obtain the points structures
+
+        // THOUGH we do it only if there isn't already a task annotations in the session
+        // because if it's there, that means that it's more update than this
+        if (sessionStorage.getItem(`taskAnnotations_${i}`) === null) {
+          sessionStorage.setItem(`taskAnnotations_${i}`, JSON.stringify(task_annotations));
+        }
+
       }
-      const task_annotations = await response.json();
-      console.log("data:", task_annotations);
-
-      // let's save these structure in the session
-      // so we use the same mechanism to obtain the points structures
-
-      // THOUGH we do it only if there isn't already a task annotations in the session
-      // because if it's there, that means that it's more update than this
-      if (sessionStorage.getItem(`taskAnnotations_${i}`) === null) {
-        sessionStorage.setItem(`taskAnnotations_${i}`, JSON.stringify(task_annotations));
-      }
-
+      
     } catch (error) {
       console.error("Error during load_task_annotations_from_server fetch", error);
       return;
     }
 
   }
-
 
 }

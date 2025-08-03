@@ -109,37 +109,17 @@ def serve_task_file(filename):
 
 @app.route('/save-task-annotations', methods=['POST'])
 def save_task_annotations():
+    # we receive task annotaions for one image (one index)
+    data = request.get_json()
 
-    annotations = request.get_json()
-
-    vanishing_points_x = annotations.get("vanishing_points_x")
-    vanishing_points_y = annotations.get("vanishing_points_y")
-    vanishing_points_z = annotations.get("vanishing_points_z")
-    construction_points = annotations.get("construction_points")
-    label_points = annotations.get("label_points")
-    construction_lines = annotations.get("construction_lines")
-    bounding_boxes = annotations.get("bounding_boxes")
-
-    # we might check if those are good annotations
-    # but we are local, so it doens't matter
+    index = data.get("index")
+    task_annotations = data.get("task_annotations")
     
     # we simply save the annotations in TaskAnnotations
-    nimages = len(annotations.get("vanishing_points_x"))
-    for i in range(nimages):
-        filename = 'taskAnnotations_' + str(i) + '.json'
-        data = {
-            "vanishing_points_x": vanishing_points_x[i],
-            "vanishing_points_y": vanishing_points_y[i],
-            "vanishing_points_z": vanishing_points_z[i],
-            "construction_points": construction_points[i],
-            "label_points": label_points[i],
-            "construction_lines": construction_lines[i],
-            "bounding_boxes": bounding_boxes[i],
-        }
-        with open(os.path.join(task_annotations_directory, filename), 'w') as f:
-            json.dump(data, f, indent=4)
+    filename = 'taskAnnotations_' + str(index) + '.json'
+    with open(os.path.join(task_annotations_directory, filename), 'w') as f:
+        json.dump(task_annotations, f, indent=4)
 
-    
     return {"response": "ok"}
 
 

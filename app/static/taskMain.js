@@ -133,11 +133,15 @@ export const points_structures = {
 };
 
 function initialize_points_structures(){
+  // warning some of these have to be null
 
   // for an image there is only one vanishing point on the x axis
   points_structures.vanishing_points_x = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++) points_structures.vanishing_points_x[i] = null;
   points_structures.vanishing_points_y = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++) points_structures.vanishing_points_y[i] = null;
   points_structures.vanishing_points_z = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++) points_structures.vanishing_points_z[i] = null;
 
   points_structures.construction_points = new Array(state.nimages);
   for(let i = 0; i < state.nimages; i++){
@@ -159,6 +163,7 @@ function initialize_points_structures(){
 
   // for an image there is only one bounding box
   points_structures.bounding_boxes = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++) points_structures.bounding_boxes[i] = null;
 
   points_structures.temp_lines = new Array(state.nimages);
   for(let i = 0; i < state.nimages; i++){
