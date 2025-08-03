@@ -1,6 +1,6 @@
 import { Line, Point, BoundingBox, ConstructionLine } from "./taskClasses.js";
 import { task_directory, images_directory, save_task_annotations_url, task_annotations_directory, state } from "./taskState.js";
-import { vanishing_points_x, vanishing_points_y, vanishing_points_z, construction_points, label_points, construction_lines, bounding_boxes } from "./taskMain.js"
+import { points_structures } from "./taskMain.js"
 
 
 // function the fetch the main data (npoints, images'names list, nimages and images)
@@ -48,166 +48,133 @@ export async function fetch_image(index) {
 
 // ========================================================
 
-// function to obtain the points structures from the session
-// the problem is that these structures are complex, so we have to recreate them
+// SESSION
 
-export function load_points_structure_from_session(key){
 
-  function load_from_session() {
-    const item = sessionStorage.getItem(key);
-    return item ? JSON.parse(item) : null;
-  }
+export function save_task_annotations_to_session(){
+  // saves the task annotations for the current index
 
-  if(key == 'vanishing_points_x'){
-    const item = load_from_session();
-    if(item == null) return new Array(state.nimages);  // that means bounding_boxes was not in the session
-    // else vanishing_points is just the item (it's not a complex structure)
-    return item;
-  }
+  const task_annotations = {
+    "vanishing_points_x": points_structures.vanishing_points_x[state.index],
+    "vanishing_points_y": points_structures.vanishing_points_y[state.index],
+    "vanishing_points_z": points_structures.vanishing_points_z[state.index],
+    "construction_points": points_structures.construction_points[state.index],
+    "label_points": points_structures.label_points[state.index],
+    "construction_lines": points_structures.construction_lines[state.index],
+    "bounding_boxes": points_structures.bounding_boxes[state.index]
+  };
+
+  const task_annotations_name = `taskAnnotations_${state.index}`;
+
+  sessionStorage.setItem(task_annotations_name, JSON.stringify(task_annotations));
+}
+
+
+export function load_task_annotations_from_session(){
+  // load the task annotations for the current index
   
-  if(key == 'vanishing_points_y'){
-    const item = load_from_session();
-    if(item == null) return new Array(state.nimages);  // that means bounding_boxes was not in the session
-    // else vanishing_points is just the item (it's not a complex structure)
-    return item
-  }
+  const task_annotations_name = `taskAnnotations_${state.index}`;
+  const task_annotations = JSON.parse(sessionStorage.getItem(task_annotations_name));
+  
+  // not necesserly there are annotations
+  if(task_annotations){
 
-  if(key == 'vanishing_points_z'){
-    const item = load_from_session();
-    if(item == null) return new Array(state.nimages);  // that means bounding_boxes was not in the session
-    // else vanishing_points is just the item (it's not a complex structure)
-    return item
-  }
+    points_structures.vanishing_points_x[state.index] = task_annotations.vanishing_points_x;
+    points_structures.vanishing_points_y[state.index] = task_annotations.vanishing_points_y;
+    points_structures.vanishing_points_z[state.index] = task_annotations.vanishing_points_z;
 
-  if(key == 'label_points'){
-    const item = load_from_session();
-    if(item == null) {
-      // that means construction_points was not in the session 
-      let label_points = new Array(state.nimages);
-      for(let i = 0; i < state.nimages; i++){
-        // for an image there are exactly npoints points
-        label_points[i] = new Array(state.npoints);
+    // the problem is that some of points structures are complex, so we have to recreate them
+    for(let i = 0; i < state.nconstructionpoints; i++){
+      if(task_annotations.construction_points[i] != null){
+        const x = task_annotations.construction_points[i].x;
+        const y = task_annotations.construction_points[i].y;
+        const color = task_annotations.construction_points[i].color;
+        const visibility = task_annotations.construction_points[i].visibility;
+        const hide = task_annotations.construction_points[i].hide;
+        const lx = task_annotations.construction_points[i].line_to_vp_x;
+        const ly = task_annotations.construction_points[i].line_to_vp_y;
+        const lz = task_annotations.construction_points[i].line_to_vp_z;
+
+        points_structures.construction_points[state.index][i] = new Point(x, y, color);
+        points_structures.construction_points[state.index][i].visibility = visibility;
+        points_structures.construction_points[state.index][i].hide = hide;
+        points_structures.construction_points[state.index][i].line_to_vp_x = new Line(lx.px, lx.py, lx.dx, lx.dy, lx.color);
+        points_structures.construction_points[state.index][i].line_to_vp_x.hide = lx.hide
+        points_structures.construction_points[state.index][i].line_to_vp_y = new Line(ly.px, ly.py, ly.dx, ly.dy, ly.color);
+        points_structures.construction_points[state.index][i].line_to_vp_y.hide = ly.hide
+        points_structures.construction_points[state.index][i].line_to_vp_z = new Line(lz.px, lz.py, lz.dx, lz.dy, lz.color);
+        points_structures.construction_points[state.index][i].line_to_vp_z.hide = lz.hide
       }
-      return label_points;
     }
-    // else construction_points was in the session 
+
+    for(let i = 0; i < state.npoints; i++){
+      if(task_annotations.label_points[i] != null){
+        const x = task_annotations.label_points[i].x;
+        const y = task_annotations.label_points[i].y;
+        const color = task_annotations.label_points[i].color;
+        const visibility = task_annotations.label_points[i].visibility;
+        const hide = task_annotations.label_points[i].hide;
+        const lx = task_annotations.label_points[i].line_to_vp_x;
+        const ly = task_annotations.label_points[i].line_to_vp_y;
+        const lz = task_annotations.label_points[i].line_to_vp_z;
+
+        points_structures.label_points[state.index][i] = new Point(x, y, color);
+        points_structures.label_points[state.index][i].visibility = visibility;
+        points_structures.label_points[state.index][i].hide = hide;
+        points_structures.label_points[state.index][i].line_to_vp_x = new Line(lx.px, lx.py, lx.dx, lx.dy, lx.color);
+        points_structures.label_points[state.index][i].line_to_vp_x.hide = lx.hide
+        points_structures.label_points[state.index][i].line_to_vp_y = new Line(ly.px, ly.py, ly.dx, ly.dy, ly.color);
+        points_structures.label_points[state.index][i].line_to_vp_y.hide = ly.hide
+        points_structures.label_points[state.index][i].line_to_vp_z = new Line(lz.px, lz.py, lz.dx, lz.dy, lz.color);
+        points_structures.label_points[state.index][i].line_to_vp_z.hide = lz.hide
+      }
+    }
+
+    for(let i = 0; i < state.nconstructionlines; i++){
+      if(task_annotations.construction_lines[i] != null){
+        const x1 = task_annotations.construction_lines[i].x1;
+        const y1 = task_annotations.construction_lines[i].y1;
+        const x2 = task_annotations.construction_lines[i].x2;
+        const y2 = task_annotations.construction_lines[i].y2;
+        const color = task_annotations.construction_lines[i].color;
+        const hide = task_annotations.construction_lines[i].hide;
+        points_structures.construction_lines[state.index][i] = new ConstructionLine(x1, y1, x2, y2, color);
+        points_structures.construction_lines[state.index][i].hide = hide;
+      }
+    }
+
+    if(task_annotations.bounding_boxes != null){
+      const x1 = task_annotations.bounding_boxes.x1;
+      const y1 = task_annotations.bounding_boxes.y1;
+      const x2 = task_annotations.bounding_boxes.x2;
+      const y2 = task_annotations.bounding_boxes.y2;
+      const color = task_annotations.bounding_boxes.color;
+      const hide = task_annotations.bounding_boxes.hide;
+      points_structures.bounding_boxes[state.index] = new BoundingBox(x1, y1, x2, y2, color);
+      points_structures.bounding_boxes[state.index].hide = hide;
+    }
     
-    let label_points = new Array(state.nimages);
-    for(let i = 0; i < state.nimages; i++){
-      /// for an image there are exactly npoints points
-      label_points[i] = new Array(state.npoints);
-      for(let j = 0; j < state.npoints; j++){
-        if(item[i][j] != null){
-          // we have to rebuild the objects based on what was saved in the session
-          label_points[i][j] = new Point(item[i][j].x, item[i][j].y, item[i][j].color);
-          label_points[i][j].hide = item[i][j].hide;
-          label_points[i][j].visibility = item[i][j].visibility;
-          label_points[i][j].line_to_vp_x = new Line(item[i][j].line_to_vp_x.px, item[i][j].line_to_vp_x.py, item[i][j].line_to_vp_x.dx, item[i][j].line_to_vp_x.dy, item[i][j].line_to_vp_x.color);
-          label_points[i][j].line_to_vp_x.hide = item[i][j].line_to_vp_x.hide;
-          label_points[i][j].line_to_vp_y = new Line(item[i][j].line_to_vp_y.px, item[i][j].line_to_vp_y.py, item[i][j].line_to_vp_y.dx, item[i][j].line_to_vp_y.dy, item[i][j].line_to_vp_y.color);
-          label_points[i][j].line_to_vp_y.hide = item[i][j].line_to_vp_y.hide;
-          label_points[i][j].line_to_vp_z = new Line(item[i][j].line_to_vp_z.px, item[i][j].line_to_vp_z.py, item[i][j].line_to_vp_z.dx, item[i][j].line_to_vp_z.dy, item[i][j].line_to_vp_z.color);
-          label_points[i][j].line_to_vp_z.hide = item[i][j].line_to_vp_z.hide;
-        }
-      }
-    }
-    return label_points;
-  }
-
-  if(key == 'construction_points'){
-    const item = load_from_session();
-    if(item == null) {
-      // that means construction_points was not in the session 
-      let construction_points = new Array(state.nimages);
-      for(let i = 0; i < state.nimages; i++){
-        // for an image there are max nconstructionpoints construction points
-        construction_points[i] = new Array(state.nconstructionpoints);
-      }
-      return construction_points;
-    }
-    // else construction_points was in the session 
-    
-    let construction_points = new Array(state.nimages);
-    for(let i = 0; i < state.nimages; i++){
-      // for an image there are max nconstructionpoints construction points
-      construction_points[i] = new Array(state.nconstructionpoints);
-      for(let j = 0; j < state.nconstructionpoints; j++){
-        if(item[i][j] != null){
-          // we have to rebuild the objects based on what was saved in the session
-          construction_points[i][j] = new Point(item[i][j].x, item[i][j].y, item[i][j].color);
-          construction_points[i][j].hide = item[i][j].hide;
-          construction_points[i][j].line_to_vp_x = new Line(item[i][j].line_to_vp_x.px, item[i][j].line_to_vp_x.py, item[i][j].line_to_vp_x.dx, item[i][j].line_to_vp_x.dy, item[i][j].line_to_vp_x.color);
-          construction_points[i][j].line_to_vp_x.hide = item[i][j].line_to_vp_x.hide;
-          construction_points[i][j].line_to_vp_y = new Line(item[i][j].line_to_vp_y.px, item[i][j].line_to_vp_y.py, item[i][j].line_to_vp_y.dx, item[i][j].line_to_vp_y.dy, item[i][j].line_to_vp_y.color);
-          construction_points[i][j].line_to_vp_y.hide = item[i][j].line_to_vp_y.hide;
-          construction_points[i][j].line_to_vp_z = new Line(item[i][j].line_to_vp_z.px, item[i][j].line_to_vp_z.py, item[i][j].line_to_vp_z.dx, item[i][j].line_to_vp_z.dy, item[i][j].line_to_vp_z.color);
-          construction_points[i][j].line_to_vp_z.hide = item[i][j].line_to_vp_z.hide;
-        }
-      } 
-    }
-    return construction_points;
-    
-  }
-
-  if(key == 'construction_lines'){
-    const item = load_from_session();
-    if(item == null) {
-      // that means construction_lines was not in the session 
-      let construction_lines = new Array(state.nimages);
-      for(let i = 0; i < state.nimages; i++){
-        // for an image there are max nconstructionlines construction lines
-        construction_lines[i] = new Array(state.nconstructionlines);
-      }
-      return construction_lines;
-    }
-    // else construction_lines was in the session 
-    
-    let construction_lines = new Array(state.nimages);
-    for(let i = 0; i < state.nimages; i++){
-      // for an image there are max nconstructionlines construction lines
-      construction_lines[i] = new Array(state.nconstructionlines);
-      for(let j = 0; j < state.nconstructionlines; j++){
-        if(item[i][j] != null){
-          // we have to rebuild the objects based on what was saved in the session
-          construction_lines[i][j] = new ConstructionLine(item[i][j].x1, item[i][j].y1, item[i][j].x2, item[i][j].y2, item[i][j].color);
-          construction_lines[i][j].hide = item[i][j].hide;
-        }
-      }
-    }
-    return construction_lines;
-    
-  }
-
-  if(key == 'bounding_boxes'){
-    const item = load_from_session();
-    if(item == null) return new Array(state.nimages);  // that means bounding_boxes was not in the session 
-
-    let bounding_boxes = new Array(state.nimages);
-    for(let i = 0; i < state.nimages; i++){
-      if(item[i] != null){
-        // we have to rebuild the objects based on what was saved in the session
-        bounding_boxes[i] = new BoundingBox(item[i].x1, item[i].y1, item[i].x2, item[i].y2, item[i].color);
-        bounding_boxes[i].hide = item[i].hide;
-      }
-    }
-    return bounding_boxes;
+  } else {
+    // there are no task annotations
   }
 
 }
 
+
 // ========================================================
 
-// save task annotations functions
+// SECONDARY MEMORY (IN THE SERVER)
 
-export function save_task_annotations(){
+
+export function save_task_annotations_to_server(){
   const annotations = {
-    "vanishing_points_x": vanishing_points_x,
-    "vanishing_points_y": vanishing_points_y,
-    "vanishing_points_z": vanishing_points_z,
-    "construction_points": construction_points,
-    "label_points": label_points,
-    "construction_lines": construction_lines,
-    "bounding_boxes": bounding_boxes,
+    "vanishing_points_x": points_structures.vanishing_points_x,
+    "vanishing_points_y": points_structures.vanishing_points_y,
+    "vanishing_points_z": points_structures.vanishing_points_z,
+    "construction_points": points_structures.construction_points,
+    "label_points": points_structures.label_points,
+    "construction_lines": points_structures.construction_lines,
+    "bounding_boxes": points_structures.bounding_boxes,
   };
 
   // Invio POST a Flask
@@ -220,7 +187,7 @@ export function save_task_annotations(){
   })
   .then(response => {
     if (!response.ok) {
-      throw new Error("Error in the request");
+      throw new Error("Error in save_task_annotations");
     }
     return response.json();
   })
@@ -232,56 +199,11 @@ export function save_task_annotations(){
   });
 }
 
-/*
-export async function load_task_annotations() {
-  for(let i = 0; i < state.nimages; i++){
-    const filename = "taskAnnotation_" + i + '.json'
-    const response = await fetch(task_annotations_directory + filename);
-    if (!response.ok) throw new Error("Error during load_task_annotations fetch");
-    const data = await response.json();
 
-    // let's save it in the session
-    console.log("data: ", data);
-    state.npoints = data.npoints;
-    state.nimages = data.nimages;
-
-    
-    sessionStorage.setItem('vanishing_points_x', JSON.stringify(vanishing_points_x));
-    sessionStorage.setItem('vanishing_points_y', JSON.stringify(vanishing_points_y));
-    sessionStorage.setItem('vanishing_points_z', JSON.stringify(vanishing_points_z));
-    sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-    sessionStorage.setItem('label_points', JSON.stringify(label_points));
-    sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
-    sessionStorage.setItem('bounding_boxes', JSON.stringify(bounding_boxes));
-    
-
-    sessionStorage.setItem('vanishing_points_x', data.vanishing_points_x);
-    sessionStorage.setItem('vanishing_points_y', data.vanishing_points_y);
-    sessionStorage.setItem('vanishing_points_z', data.vanishing_points_z);
-    sessionStorage.setItem('construction_points', data.construction_points);
-    sessionStorage.setItem('label_points', data.label_points);
-    sessionStorage.setItem('construction_lines', data.construction_lines);
-    sessionStorage.setItem('bounding_boxes', data.bounding_boxes);
-    
-    return null;
-  }
-  
-}
-*/
-
-
-export async function load_task_annotations() {
-
-  let temp_vanishing_points_x = [];
-  let temp_vanishing_points_y = [];
-  let temp_vanishing_points_z = [];
-  let temp_construction_points = [];
-  let temp_label_points = [];
-  let temp_construction_lines = [];
-  let temp_bounding_boxes = [];
+export async function load_task_annotations_from_server() {
   
   for (let i = 0; i < state.nimages; i++) {
-    const filename = `taskAnnotation_${i}.json`;
+    const filename = `taskAnnotations_${i}.json`;
     const url = task_annotations_directory + filename;
 
     try {
@@ -289,41 +211,33 @@ export async function load_task_annotations() {
 
       // if file doesn't exist
       if (response.status === 404) {
-        console.warn(`File not found: ${filename}`);
+        console.warn(`File not found (it's possible that the user never saved): ${filename}`);
+        // we can already return, because right now it annotations are saved on the server, they are all saved
+        // (if one of them is not present, no other else is present)
         return;
       } 
       // other errors
       if (!response.ok) {
         throw new Error(`HTTP error ${response.status} on ${filename}`);
       }
-      // else we append the data in a temporary structure that we will save later
-      const data = await response.json();
-      console.log("data:", data);
+      const task_annotations = await response.json();
+      console.log("data:", task_annotations);
 
-      temp_vanishing_points_x.push(data.vanishing_points_x);
-      temp_vanishing_points_y.push(data.vanishing_points_y);
-      temp_vanishing_points_z.push(data.vanishing_points_z);
-      temp_construction_points.push(data.construction_points);
-      temp_label_points.push(data.label_points);
-      temp_construction_lines.push(data.construction_lines);
-      temp_bounding_boxes.push(data.bounding_boxes);
+      // let's save these structure in the session
+      // so we use the same mechanism to obtain the points structures
+
+      // THOUGH we do it only if there isn't already a task annotations in the session
+      // because if it's there, that means that it's more update than this
+      if (sessionStorage.getItem(`taskAnnotations_${i}`) === null) {
+        sessionStorage.setItem(`taskAnnotations_${i}`, JSON.stringify(task_annotations));
+      }
 
     } catch (error) {
-      console.error("Error during load_task_annotations fetch", error);
+      console.error("Error during load_task_annotations_from_server fetch", error);
       return;
     }
 
   }
 
-  // let's save these structure in the session
-  // so we use the same mechanism to obtain the points structures
-  sessionStorage.setItem('vanishing_points_x', JSON.stringify(temp_vanishing_points_x));
-  sessionStorage.setItem('vanishing_points_y', JSON.stringify(temp_vanishing_points_y));
-  sessionStorage.setItem('vanishing_points_z', JSON.stringify(temp_vanishing_points_z));
-  sessionStorage.setItem('construction_points', JSON.stringify(temp_construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(temp_label_points));
-  sessionStorage.setItem('construction_lines', JSON.stringify(temp_construction_lines));
-  sessionStorage.setItem('bounding_boxes', JSON.stringify(temp_bounding_boxes));
 
-  console.log(sessionStorage.getItem('vanishing_points_x'));
 }

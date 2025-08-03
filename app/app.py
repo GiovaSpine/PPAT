@@ -126,7 +126,7 @@ def save_task_annotations():
     # we simply save the annotations in TaskAnnotations
     nimages = len(annotations.get("vanishing_points_x"))
     for i in range(nimages):
-        filename = 'taskAnnotation_' + str(i) + '.json'
+        filename = 'taskAnnotations_' + str(i) + '.json'
         data = {
             "vanishing_points_x": vanishing_points_x[i],
             "vanishing_points_y": vanishing_points_y[i],

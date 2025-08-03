@@ -1,8 +1,8 @@
-import { ucanvas, state, colors } from "./taskState.js";
+import { ucanvas, state } from "./taskState.js";
 import { draw } from "./taskImageRenderer.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, is_image_clicked } from "./taskUtils.js";
-import {construction_points, label_points, construction_lines} from "./taskMain.js"
-import { save_task_annotations } from "./taskDataLoader.js";
+import { points_structures} from "./taskMain.js"
+import { save_task_annotations_to_server, save_task_annotations_to_session } from "./taskDataLoader.js";
 
 
 // BEFORE DELETING THE TASK SERVER SIDE WE HAVE TO DELETE THE BROWSER SESSION
@@ -124,13 +124,13 @@ export function handle_mouse_highlight_enter(event) {
 
   if (point_div_id.startsWith("construction_point_")) {
     type = "construction_points";
-    construction_points[state.index][id].highlight = true;
+    points_structures.construction_points[state.index][id].highlight = true;
   } else if (point_div_id.startsWith("label_point_")) {
     type = "label_points";
-    label_points[state.index][id].highlight = true;
+    points_structures.label_points[state.index][id].highlight = true;
   } else if (point_div_id.startsWith("construction_line_")) {
     type = "construction_lines";
-    construction_lines[state.index][id].highlight = true;
+    points_structures.construction_lines[state.index][id].highlight = true;
   }
 
   // console.log("in", type, id);
@@ -150,13 +150,13 @@ export function handle_mouse_highlight_leave(event) {
 
   if (point_div_id.startsWith("construction_point_")) {
     type = "construction_points";
-    construction_points[state.index][id].highlight = false;
+    points_structures.construction_points[state.index][id].highlight = false;
   } else if (point_div_id.startsWith("label_point_")) {
     type = "label_points";
-    label_points[state.index][id].highlight = false;
+    points_structures.label_points[state.index][id].highlight = false;
   } else if (point_div_id.startsWith("construction_line_")) {
     type = "construction_lines";
-    construction_lines[state.index][id].highlight = false;
+    points_structures.construction_lines[state.index][id].highlight = false;
   }
 
   // console.log("out", type, id);
@@ -276,6 +276,6 @@ ucanvas.addEventListener("wheel", function (e) {
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.key === 's') {
     e.preventDefault(); // prevent the automatic behaviour of the page
-    save_task_annotations();
+    save_task_annotations_to_server();
   }
 });

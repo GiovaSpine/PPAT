@@ -1,5 +1,5 @@
 import { lctx, uctx, lcanvas,state } from "./taskState.js";
-import { bounding_boxes, construction_lines, construction_points, label_points, temp_lines } from "./taskMain.js";
+import { points_structures } from "./taskMain.js";
 
 export function draw(){
   // before drawing we have to eliminate the content of the upper canvas
@@ -11,24 +11,24 @@ export function draw(){
   lctx.drawImage(state.image, state.image_x, state.image_y, state.image.width * state.image_scale, state.image.height * state.image_scale);
 
   // we need to draw the varius temporary lines...
-  for(let i = 0; i < temp_lines[state.index].length; i++){
-    temp_lines[state.index][i].draw();
+  for(let i = 0; i < points_structures.temp_lines[state.index].length; i++){
+    points_structures.temp_lines[state.index][i].draw();
   }
 
   // we need to draw the bounding box
-  if(bounding_boxes[state.index] != null) bounding_boxes[state.index].draw();
+  if(points_structures.bounding_boxes[state.index] != null) points_structures.bounding_boxes[state.index].draw();
 
   // we need to draw the construction lines
   for(let i = 0; i < state.nconstructionlines; i++){
-    if(construction_lines[state.index][i] != null) construction_lines[state.index][i].draw();
+    if(points_structures.construction_lines[state.index][i] != null) points_structures.construction_lines[state.index][i].draw();
   }
 
   // we need to draw the varius points...
   for(let i = 0; i < state.nconstructionpoints; i++){
-    if(construction_points[state.index][i] != null) construction_points[state.index][i].draw();
+    if(points_structures.construction_points[state.index][i] != null) points_structures.construction_points[state.index][i].draw();
   }
   for(let i = 0; i < state.nimages; i++){
-    if(label_points[state.index][i] != null) label_points[state.index][i].draw();
+    if(points_structures.label_points[state.index][i] != null) points_structures.label_points[state.index][i].draw();
   }
 
   

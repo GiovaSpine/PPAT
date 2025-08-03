@@ -1,6 +1,6 @@
 import { counter, message_element, ucanvas, state, colors, icons_directories } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
-import { fetch_data, fetch_image_list, fetch_image, load_points_structure_from_session, load_task_annotations } from "./taskDataLoader.js";
+import { fetch_data, fetch_image_list, fetch_image, save_task_annotations_to_session, load_task_annotations_from_session, load_task_annotations_from_server} from "./taskDataLoader.js";
 import { wait_for_click_or_escape, wait_for_enter_or_escape, handle_mouse_highlight_enter, handle_mouse_highlight_leave } from "./taskEvents.js";
 import { BoundingBox, ConstructionLine, Line, Point } from "./taskClasses.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked, vector_normalize } from "./taskUtils.js";
@@ -37,10 +37,14 @@ async function main() {
     // let's update the counter of images
     counter.textContent = `${state.index + 1} / ${state.nimages}`;
 
-    await load_task_annotations();
-
     // at this point we know nimages and npoints (we know the dimensions fot these structures)
     initialize_points_structures();
+
+    // there are already some annotations in the server ?
+    await load_task_annotations_from_server();
+
+    // we look if there are already some task annotations in the session for this index
+    load_task_annotations_from_session();
 
     // if there was already some structures we update points container
     update_points_container();
@@ -67,6 +71,9 @@ async function next_image() {
 
   state.image = await fetch_image(state.index);
 
+  // because we are changing index we have to see if there are already annotations
+  load_task_annotations_from_session();
+
   initial_position_and_scale();
 
   update_points_container();
@@ -87,6 +94,9 @@ async function prev_image() {
   sessionStorage.setItem('index', state.index);
 
   state.image = await fetch_image(state.index);
+
+  // because we are changing index we have to see if there are already annotations
+  load_task_annotations_from_session();
 
   initial_position_and_scale();
 
@@ -109,41 +119,51 @@ function reset_view(){
 
 // ========================================================
 
-// points structures
+// POINTS STRUCTURES
 
-export let vanishing_points_x = null;  // array of 'nimages' points, that rapresent vanishing points on the x axis
-export let vanishing_points_y = null;
-export let vanishing_points_z = null;
-export let construction_points = null;  // array of 'nimages' array of  'nconstructionpoints' construction points. Construction points are used to select label points precisely
-export let label_points = null;  // array of 'nimages' array of 'npoints' label points. These are the actual labels for the model
-export let construction_lines = null;  // array of 'nimages' array of  'nconstructionlines' construction lines
-export let bounding_boxes = null;  // array of 'nimages' bounding boxes
-export let temp_lines = null;  // array of 'nimages' lists that containes temporary lines to draw
-
+export const points_structures = {
+  vanishing_points_x : null,  // array of 'nimages' points, that rapresent vanishing points on the x axis
+  vanishing_points_y : null,
+  vanishing_points_z : null,  
+  construction_points : null,  // array of 'nimages' array of  'nconstructionpoints' construction points. Construction points are used to select label points precisely
+  label_points : null,  // array of 'nimages' array of 'npoints' label points. These are the actual labels for the model
+  construction_lines : null,  // array of 'nimages' array of  'nconstructionlines' construction lines
+  bounding_boxes : null,  // array of 'nimages' bounding boxes
+  temp_lines : null  // array of 'nimages' lists that containes temporary lines to draw
+};
 
 function initialize_points_structures(){
 
-  vanishing_points_x = load_points_structure_from_session('vanishing_points_x');
+  // for an image there is only one vanishing point on the x axis
+  points_structures.vanishing_points_x = new Array(state.nimages);
+  points_structures.vanishing_points_y = new Array(state.nimages);
+  points_structures.vanishing_points_z = new Array(state.nimages);
 
-  vanishing_points_y = load_points_structure_from_session('vanishing_points_y');
-
-  vanishing_points_z = load_points_structure_from_session('vanishing_points_z');
-
-  construction_points = load_points_structure_from_session('construction_points');
-
-  label_points = load_points_structure_from_session('label_points');
-
-  construction_lines = load_points_structure_from_session('construction_lines');
-
-  bounding_boxes = load_points_structure_from_session('bounding_boxes');
-
-  // temp_lines is an exception, because temp_lines contains lines shown during add vanishing points operations
-  // so if the user change page during an operation, this last one will stop being executed
-  // so there will be no more temporary lines, so we don't have to save and load them in the session
-  temp_lines = new Array(state.nimages);
+  points_structures.construction_points = new Array(state.nimages);
   for(let i = 0; i < state.nimages; i++){
-    // we can have 'n' temporary lines, but in practice there are 4
-    temp_lines[i] = [];
+    // for an image there are max nconstructionpoints construction points
+    points_structures.construction_points[i] = new Array(state.nconstructionpoints);
+  }
+
+  points_structures.label_points = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++){
+    // for an image there are exactly npoints points
+    points_structures.label_points[i] = new Array(state.npoints);
+  }
+
+  points_structures.construction_lines = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++){
+    // for an image there are max nconstructionlines construction lines
+    points_structures.construction_lines[i] = new Array(state.nconstructionlines);
+  }
+
+  // for an image there is only one bounding box
+  points_structures.bounding_boxes = new Array(state.nimages);
+
+  points_structures.temp_lines = new Array(state.nimages);
+  for(let i = 0; i < state.nimages; i++){
+    // for an image there can be 'n' temporary lines, but in practice there are max 4
+    points_structures.temp_lines[i] = [];
   }
 
 }
@@ -201,9 +221,9 @@ async function add_vanishing_point(type_of_vp){
 
   // check if there is already a vanishing point for type_of_vp axis
   const message = "Warning: there is already a vanishing point on the " + type_of_vp + " axis for this image";
-  if(type_of_vp == 'x' && vanishing_points_x[state.index] != null) {message_element.textContent = message; return;}
-  else if(type_of_vp == 'y' && vanishing_points_y[state.index] != null) {message_element.textContent = message; return;}
-  else if(type_of_vp == 'z' && vanishing_points_z[state.index] != null) {message_element.textContent = message; return;}
+  if(type_of_vp == 'x' && points_structures.vanishing_points_x[state.index] != null) {message_element.textContent = message; return;}
+  else if(type_of_vp == 'y' && points_structures.vanishing_points_y[state.index] != null) {message_element.textContent = message; return;}
+  else if(type_of_vp == 'z' && points_structures.vanishing_points_z[state.index] != null) {message_element.textContent = message; return;}
   else message_element.textContent = "Select two point for the first line and two other points for the second line; press enter to confirm the selection or esc to undo the operation";
 
 
@@ -211,7 +231,7 @@ async function add_vanishing_point(type_of_vp){
 
   function undo_add_vanishing_point(){
     message_element.textContent = "";
-    temp_lines[state.index] = [];
+    points_structures.temp_lines[state.index] = [];
     draw();
     set_all_buttons_enabled(true);  // reactivate all the buttons
   }
@@ -233,7 +253,7 @@ async function add_vanishing_point(type_of_vp){
   const dir1 = vector_diff([cursur_x2_image, cursur_y2_image], [cursur_x1_image, cursur_y1_image]);  // dir goes from e1 to e2
   const line1 = new Line(cursur_x1_image, cursur_y1_image, dir1[0], dir1[1], color);
   
-  temp_lines[state.index].push(line1);
+  points_structures.temp_lines[state.index].push(line1);
   draw();
 
   // let's wait the user to enter the last two points
@@ -251,7 +271,7 @@ async function add_vanishing_point(type_of_vp){
   const dir2 = vector_diff([cursur_x4_image, cursur_y4_image], [cursur_x3_image, cursur_y3_image]);  // dir goes from e3 to e4
   const line2 = new Line(cursur_x3_image, cursur_y3_image, dir2[0], dir2[1], color);
 
-  temp_lines[state.index].push(line2);
+  points_structures.temp_lines[state.index].push(line2);
   draw();
 
   // we wait the user to press enter
@@ -267,18 +287,16 @@ async function add_vanishing_point(type_of_vp){
   const [qx, qy] = [line2.px + t2 * line2.dx, line2.py + t2 * line2.dy];
   
   // let's add the vanishing point in the vanishing_points array
-  if(type_of_vp == 'x') vanishing_points_x[state.index] = [qx, qy];
-  else if(type_of_vp == 'y') vanishing_points_y[state.index] = [qx, qy];
-  else if(type_of_vp == 'z') vanishing_points_z[state.index] = [qx, qy];
+  if(type_of_vp == 'x') points_structures.vanishing_points_x[state.index] = [qx, qy];
+  else if(type_of_vp == 'y') points_structures.vanishing_points_y[state.index] = [qx, qy];
+  else if(type_of_vp == 'z') points_structures.vanishing_points_z[state.index] = [qx, qy];
   else console.log("Impossible to have this option in add_vanishing_point");
 
   // let's save those in the session
-  sessionStorage.setItem('vanishing_points_x', JSON.stringify(vanishing_points_x));
-  sessionStorage.setItem('vanishing_points_y', JSON.stringify(vanishing_points_y));
-  sessionStorage.setItem('vanishing_points_z', JSON.stringify(vanishing_points_z));
+  save_task_annotations_to_session();
 
   // at the end we don't care about the lines that he chose to find the vanishing point
-  temp_lines[state.index] = [];
+  points_structures.temp_lines[state.index] = [];
 
   message_element.textContent = "";
   update_points_container();
@@ -290,9 +308,9 @@ async function add_vanishing_point(type_of_vp){
 async function add_point(type_of_point){
 
   // check if there user added the vanishing points for every axis
-  const is_vp_x_set = vanishing_points_x[state.index] != null;
-  const is_vp_y_set = vanishing_points_y[state.index] != null;
-  const is_vp_z_set = vanishing_points_z[state.index] != null;
+  const is_vp_x_set = points_structures.vanishing_points_x[state.index] != null;
+  const is_vp_y_set = points_structures.vanishing_points_y[state.index] != null;
+  const is_vp_z_set = points_structures.vanishing_points_z[state.index] != null;
 
   if (is_vp_x_set && is_vp_y_set && is_vp_z_set) {
     message_element.textContent = "Select the point or press esc to undo the operation";
@@ -321,7 +339,7 @@ async function add_point(type_of_point){
   let id = 0;
   if(type_of_point == "label"){
     for(; id < state.npoints; id++){
-      if(label_points[state.index][id] == null) break;
+      if(points_structures.label_points[state.index][id] == null) break;
     }
     if(id >= state.npoints){
       message_element.textContent = `Warning: you have reached tha max amount of label points: ${state.npoints}`;
@@ -329,7 +347,7 @@ async function add_point(type_of_point){
     }
   } else if(type_of_point == "construction"){
     for(; id < state.nconstructionpoints; id++){
-      if(construction_points[state.index][id] == null) break;
+      if(points_structures.construction_points[state.index][id] == null) break;
     }
     if(id >= state.nconstructionpoints){
       message_element.textContent = `Warning: you have reached tha max amount of construction points: ${state.nconstructionpoints}`;
@@ -349,23 +367,22 @@ async function add_point(type_of_point){
 
   // we need to add the perspective (the lines to the vanishing points)
   // let's calculate the vector from the point to the vanishing points (it's just point - vanishing point, all normalized)
-  const dir_p_vp_x = vector_normalize(vector_diff([vanishing_points_x[state.index][0], vanishing_points_x[state.index][1]], [point.x, point.y]));
-  const dir_p_vp_y = vector_normalize(vector_diff([vanishing_points_y[state.index][0], vanishing_points_y[state.index][1]], [point.x, point.y]));
-  const dir_p_vp_z = vector_normalize(vector_diff([vanishing_points_z[state.index][0], vanishing_points_z[state.index][1]], [point.x, point.y]));
+  const dir_p_vp_x = vector_normalize(vector_diff([points_structures.vanishing_points_x[state.index][0], points_structures.vanishing_points_x[state.index][1]], [point.x, point.y]));
+  const dir_p_vp_y = vector_normalize(vector_diff([points_structures.vanishing_points_y[state.index][0], points_structures.vanishing_points_y[state.index][1]], [point.x, point.y]));
+  const dir_p_vp_z = vector_normalize(vector_diff([points_structures.vanishing_points_z[state.index][0], points_structures.vanishing_points_z[state.index][1]], [point.x, point.y]));
   point.line_to_vp_x = new Line(point.x, point.y, dir_p_vp_x[0], dir_p_vp_x[1] , colors["x"]);
   point.line_to_vp_y = new Line(point.x, point.y, dir_p_vp_y[0], dir_p_vp_y[1] , colors["y"]);
   point.line_to_vp_z = new Line(point.x, point.y, dir_p_vp_z[0], dir_p_vp_z[1] , colors["z"]);
 
   // let's add the point to the corresponding array
   if(type_of_point == "label"){
-    label_points[state.index][id] = point;
+    points_structures.label_points[state.index][id] = point;
   } else if(type_of_point == "construction"){
-    construction_points[state.index][id] = point;
+    points_structures.construction_points[state.index][id] = point;
   } else console.log("Impossible to have this option in add_point");
 
   //let's save those in the session
-  sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
+  save_task_annotations_to_session();
 
   message_element.textContent = "";
   update_points_container();
@@ -380,7 +397,7 @@ async function add_construction_line(){
   // we look at the first empty space in the construction_lines array
   let id = 0;
   for(; id < state.nconstructionlines; id++){
-    if(construction_lines[state.index][id] == null) break;
+    if(points_structures.construction_lines[state.index][id] == null) break;
   }
   if(id >= state.nconstructionlines){
     // we have reached the max amount of construction lines
@@ -394,7 +411,7 @@ async function add_construction_line(){
 
   function undo_add_construction_line(id){
     message_element.textContent = "";
-    construction_lines[state.index][id] = null;
+    points_structures.construction_lines[state.index][id] = null;
     draw();
     set_all_buttons_enabled(true);  // reactivate all the buttons
   }
@@ -414,7 +431,7 @@ async function add_construction_line(){
       // let's create the construction line
       const contruction_line = new ConstructionLine(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, colors["construction_line"]);
       // let's add it already in construction_lines (we might remove it later)
-      construction_lines[state.index][id] = contruction_line;
+      points_structures.construction_lines[state.index][id] = contruction_line;
       draw();
     }
   };
@@ -433,7 +450,7 @@ async function add_construction_line(){
 
   const contruction_line = new ConstructionLine(cursur_x1_image, cursur_y1_image, cursur_x2_image, cursur_y2_image, colors["construction_line"]);
   // let's add the contruction_line in construction_lines, to draw it
-  construction_lines[state.index][id] = contruction_line;
+  points_structures.construction_lines[state.index][id] = contruction_line;
   draw();
 
   // we wait the user to press enter
@@ -441,7 +458,7 @@ async function add_construction_line(){
   if(is_enter_pressed == null) {undo_add_construction_line(id); return;}
 
   // let's save it in the session
-  sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
+  save_task_annotations_to_session();
 
   message_element.textContent = "";
   update_points_container();
@@ -453,7 +470,7 @@ async function add_construction_line(){
 async function add_bounding_box(){
 
   // check if there is already a bounding box
-  if(bounding_boxes[state.index] != null){
+  if(points_structures.bounding_boxes[state.index] != null){
     message_element.textContent = "Warning: there is already a bounding box for this image";
     return;
   } else message_element.textContent = "Select the two vertices for the bounding box; press enter to confirm the selection or esc to undo the operation";
@@ -463,7 +480,7 @@ async function add_bounding_box(){
 
   function undo_add_bounding_box(){
     message_element.textContent = "";
-    bounding_boxes[state.index] = null;
+    points_structures.bounding_boxes[state.index] = null;
     draw();
     set_all_buttons_enabled(true);  // reactivate all the buttons
   }
@@ -482,7 +499,7 @@ async function add_bounding_box(){
       // let's create the bounding box
       const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x0_image, cursur_y0_image, colors["bounding_box"]);
       // let's add it already in bounding_boxes (we might remove it later)
-      bounding_boxes[state.index] = bounding_box;
+      points_structures.bounding_boxes[state.index] = bounding_box;
       draw();
     }
   };
@@ -502,7 +519,7 @@ async function add_bounding_box(){
   // let's create the bounding box
   const bounding_box = new BoundingBox(cursur_x1_image, cursur_y1_image, cursur_x2_image, cursur_y2_image, colors["bounding_box"]);
   // let's add it already in bounding_boxes (we might remove it later)
-  bounding_boxes[state.index] = bounding_box;
+  points_structures.bounding_boxes[state.index] = bounding_box;
   draw();
 
   // let's wait the user to press enter if he is happy with the selection
@@ -511,7 +528,7 @@ async function add_bounding_box(){
   if(is_enter_pressed == null) {undo_add_bounding_box(); return};
 
   // let's save in the session
-  sessionStorage.setItem('bounding_boxes', JSON.stringify(bounding_boxes));
+  save_task_annotations_to_session();
 
   message_element.textContent = "";
   update_points_container();
@@ -537,7 +554,7 @@ function update_points_container(){
   // and "color" so that we can color the title of the point or line with the same color
 
   // creation of vanishing points elements
-  if(vanishing_points_x[state.index] != null){
+  if(points_structures.vanishing_points_x[state.index] != null){
     const point_div = document.createElement("div");
     point_div.className = "vanishing_point_x_item";
     point_div.id = `vanishing_point_x_box`;
@@ -552,7 +569,7 @@ function update_points_container(){
     container.appendChild(point_div);
   }
 
-  if(vanishing_points_y[state.index] != null){
+  if(points_structures.vanishing_points_y[state.index] != null){
     const point_div = document.createElement("div");
     point_div.className = "vanishing_point_y_item";
     point_div.id = `vanishing_point_y_box`;
@@ -567,7 +584,7 @@ function update_points_container(){
     container.appendChild(point_div);
   }
 
-  if(vanishing_points_z[state.index] != null){
+  if(points_structures.vanishing_points_z[state.index] != null){
     const point_div = document.createElement("div");
     point_div.className = "vanishing_point_z_item";
     point_div.id = `vanishing_point_z_box`;
@@ -585,7 +602,7 @@ function update_points_container(){
   // creation of construction points elements
   for(let i = 0; i < state.nconstructionpoints; i++){
 
-    if(construction_points[state.index][i] != null){
+    if(points_structures.construction_points[state.index][i] != null){
       const point_div = document.createElement("div");
       point_div.className = "construction_point_item";
       point_div.id = `construction_point_${i}`;
@@ -594,13 +611,13 @@ function update_points_container(){
       point_div.addEventListener("mouseenter", handle_mouse_highlight_enter);
       point_div.addEventListener("mouseleave", handle_mouse_highlight_leave);
 
-      const eye_icon_directory = (construction_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
-      const eye_x_icon_directory = (construction_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
-      const eye_y_icon_directory = (construction_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
-      const eye_z_icon_directory = (construction_points[state.index][i].line_to_vp_z.hide) ? icons_directories["eye-hidden-z"] : icons_directories["eye-z"];
+      const eye_icon_directory = (points_structures.construction_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+      const eye_x_icon_directory = (points_structures.construction_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
+      const eye_y_icon_directory = (points_structures.construction_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
+      const eye_z_icon_directory = (points_structures.construction_points[state.index][i].line_to_vp_z.hide) ? icons_directories["eye-hidden-z"] : icons_directories["eye-z"];
 
       point_div.innerHTML = `
-        <span style="color: ${construction_points[state.index][i].color}">Construction Point ${i}</span>
+        <span style="color: ${points_structures.construction_points[state.index][i].color}">Construction Point ${i}</span>
         <div class="controls">
           <button onclick="change_point_color(${i}, 'construction')">
             <img src="${icons_directories["artist-palette"]}" alt="Artist Palette" class="icon_button">
@@ -631,7 +648,7 @@ function update_points_container(){
   // creation of label points elements
   for(let i = 0; i < state.npoints; i++){
     
-    if(label_points[state.index][i] != null){
+    if(points_structures.label_points[state.index][i] != null){
       const point_div = document.createElement("div");
       point_div.className = "label_point_item";
       point_div.id = `label_point_${i}`;
@@ -640,13 +657,13 @@ function update_points_container(){
       point_div.addEventListener("mouseenter", handle_mouse_highlight_enter);
       point_div.addEventListener("mouseleave", handle_mouse_highlight_leave);
 
-      const eye_icon_directory = (label_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
-      const eye_x_icon_directory = (label_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
-      const eye_y_icon_directory = (label_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
-      const eye_z_icon_directory = (label_points[state.index][i].line_to_vp_z.hide) ? icons_directories["eye-hidden-z"] : icons_directories["eye-z"];
+      const eye_icon_directory = (points_structures.label_points[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+      const eye_x_icon_directory = (points_structures.label_points[state.index][i].line_to_vp_x.hide) ? icons_directories["eye-hidden-x"] : icons_directories["eye-x"];
+      const eye_y_icon_directory = (points_structures.label_points[state.index][i].line_to_vp_y.hide) ? icons_directories["eye-hidden-y"] : icons_directories["eye-y"];
+      const eye_z_icon_directory = (points_structures.label_points[state.index][i].line_to_vp_z.hide) ? icons_directories["eye-hidden-z"] : icons_directories["eye-z"];
 
       point_div.innerHTML = `
-        <span style="color: ${label_points[state.index][i].color}">Label Point ${i}</span>
+        <span style="color: ${points_structures.label_points[state.index][i].color}">Label Point ${i}</span>
         <div class="controls">
           <button onclick="change_point_color(${i}, 'label')">
             <img src="${icons_directories["artist-palette"]}" alt="Artist Palette" class="icon_button">
@@ -666,7 +683,7 @@ function update_points_container(){
           <button onclick="toggle_line_to_vp_visibility(${i}, 'label', 'z')">
              <img src="${eye_z_icon_directory}" alt="Eye Z" class="icon_button">
           </button>
-          <button id="keypoint_visibility_button" onclick="toggle_keypoint_visibility(${i})">${label_points[state.index][i].visibility}</button>
+          <button id="keypoint_visibility_button" onclick="toggle_keypoint_visibility(${i})">${points_structures.label_points[state.index][i].visibility}</button>
         </div>
       `;
 
@@ -678,7 +695,7 @@ function update_points_container(){
   // creation of construction lines
   for(let i = 0; i < state.nconstructionlines; i++){
 
-    if(construction_lines[state.index][i] != null){
+    if(points_structures.construction_lines[state.index][i] != null){
       const point_div = document.createElement("div");
       point_div.className = "construction_line_item";
       point_div.id = `construction_line_${i}`;
@@ -687,10 +704,10 @@ function update_points_container(){
       point_div.addEventListener("mouseenter", handle_mouse_highlight_enter);
       point_div.addEventListener("mouseleave", handle_mouse_highlight_leave);
 
-      const eye_icon_directory = (construction_lines[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+      const eye_icon_directory = (points_structures.construction_lines[state.index][i].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
 
       point_div.innerHTML = `
-        <span style="color: ${construction_lines[state.index][i].color}">Construction Line ${i}</span>
+        <span style="color: ${points_structures.construction_lines[state.index][i].color}">Construction Line ${i}</span>
         <div class="controls">
           <button onclick="change_c_line_color(${i})">
             <img src="${icons_directories["artist-palette"]}" alt="Artist Palette" class="icon_button">
@@ -710,12 +727,12 @@ function update_points_container(){
   }
 
   // creation of bounding box element
-  if(bounding_boxes[state.index] != null){
+  if(points_structures.bounding_boxes[state.index] != null){
     const point_div = document.createElement("div");
     point_div.className = "bounding_box_item";
     point_div.id = `bounding_box`;
 
-    const eye_icon_directory = (bounding_boxes[state.index].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
+    const eye_icon_directory = (points_structures.bounding_boxes[state.index].hide) ? icons_directories["eye-hidden"] : icons_directories["eye"];
 
     point_div.innerHTML = `
       <span>Bounding Box</span>
@@ -740,26 +757,22 @@ function update_points_container(){
 function delete_vanishing_point(type_of_vp){
   // but what happens to the points alreay present ? we have to delete all of them
   for(let i = 0; i < state.nconstructionpoints; i++){
-    construction_points[state.index][i] = null;
+    points_structures.construction_points[state.index][i] = null;
   }
   for(let i = 0; i < state.nimages; i++){
-    label_points[state.index][i] = null;
+    points_structures.label_points[state.index][i] = null;
   }
 
   if(type_of_vp == 'x'){
-    vanishing_points_x[state.index] = null;
+    points_structures.vanishing_points_x[state.index] = null;
   } else if(type_of_vp == 'y'){
-    vanishing_points_y[state.index] = null;
+    points_structures.vanishing_points_y[state.index] = null;
   } else if(type_of_vp == 'z'){
-    vanishing_points_z[state.index] = null;
+    points_structures.vanishing_points_z[state.index] = null;
   } else console.log("Impossible to have this option (in the functions of points container)");
 
   // let's save the change in the session
-  sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
-  sessionStorage.setItem('vanishing_points_x', JSON.stringify(vanishing_points_x));
-  sessionStorage.setItem('vanishing_points_y', JSON.stringify(vanishing_points_y));
-  sessionStorage.setItem('vanishing_points_z', JSON.stringify(vanishing_points_z));
+  save_task_annotations_to_session();
 
   draw();
   update_points_container();
@@ -770,18 +783,17 @@ function delete_vanishing_point(type_of_vp){
 function change_point_color(id, type_of_point) {
   if(type_of_point == 'label'){
     const local_colors = colors["label_points_possibile_colors"];
-    const current = label_points[state.index][id].color;
+    const current = points_structures.label_points[state.index][id].color;
     const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
-    label_points[state.index][id].color = next;
+    points_structures.label_points[state.index][id].color = next;
   } else if(type_of_point == 'construction') {
     const local_colors = colors["construction_points_possibile_colors"];
-    const current = construction_points[state.index][id].color;
+    const current = points_structures.construction_points[state.index][id].color;
     const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
-    construction_points[state.index][id].color = next;
+    points_structures.construction_points[state.index][id].color = next;
   } else console.log("Impossible to have this option (in the functions of points container)");
   // let's save the change in the session
-  sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
+  save_task_annotations_to_session();
 
   draw();
   update_points_container();
@@ -789,13 +801,12 @@ function change_point_color(id, type_of_point) {
 
 function toggle_point_visibility(id, type_of_point) {
   if(type_of_point == 'label'){
-    label_points[state.index][id].hide = !label_points[state.index][id].hide;;
+    points_structures.label_points[state.index][id].hide = !points_structures.label_points[state.index][id].hide;;
   } else if(type_of_point == 'construction') {
-    construction_points[state.index][id].hide = !construction_points[state.index][id].hide;
+    points_structures.construction_points[state.index][id].hide = !points_structures.construction_points[state.index][id].hide;
   } else console.log("Impossible to have this option (in the functions of points container)");
   // let's save the change in the session
-  sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
+  save_task_annotations_to_session();
 
   draw();
   update_points_container();
@@ -805,34 +816,33 @@ function toggle_line_to_vp_visibility(id, type_of_point, type_of_vp){
   if(type_of_point == 'label'){
 
     if(type_of_vp == 'x'){
-      label_points[state.index][id].line_to_vp_x.hide = !label_points[state.index][id].line_to_vp_x.hide;
+      points_structures.label_points[state.index][id].line_to_vp_x.hide = !points_structures.label_points[state.index][id].line_to_vp_x.hide;
     }
     else if(type_of_vp == 'y'){
-      label_points[state.index][id].line_to_vp_y.hide = !label_points[state.index][id].line_to_vp_y.hide;
+      points_structures.label_points[state.index][id].line_to_vp_y.hide = !points_structures.label_points[state.index][id].line_to_vp_y.hide;
     }
     else if(type_of_vp == 'z'){
-      label_points[state.index][id].line_to_vp_z.hide = !label_points[state.index][id].line_to_vp_z.hide;
+      points_structures.label_points[state.index][id].line_to_vp_z.hide = !points_structures.label_points[state.index][id].line_to_vp_z.hide;
     }
     else console.log("Impossible to have this option (in the functions of points container)");
     
   } else if(type_of_point == 'construction') {
 
     if(type_of_vp == 'x'){
-      construction_points[state.index][id].line_to_vp_x.hide = !construction_points[state.index][id].line_to_vp_x.hide;
+      points_structures.construction_points[state.index][id].line_to_vp_x.hide = !points_structures.construction_points[state.index][id].line_to_vp_x.hide;
     }
     else if(type_of_vp == 'y'){
-      construction_points[state.index][id].line_to_vp_y.hide = !construction_points[state.index][id].line_to_vp_y.hide;
+      points_structures.construction_points[state.index][id].line_to_vp_y.hide = !points_structures.construction_points[state.index][id].line_to_vp_y.hide;
     }
     else if(type_of_vp == 'z'){
-      construction_points[state.index][id].line_to_vp_z.hide = !construction_points[state.index][id].line_to_vp_z.hide;
+      points_structures.construction_points[state.index][id].line_to_vp_z.hide = !points_structures.construction_points[state.index][id].line_to_vp_z.hide;
     }
     else console.log("Impossible to have this option (in the functions of points container)");
 
   } else console.log("Impossible to have this option (in the functions of points container)");
 
   // let's save the change in the session
-  sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
+  save_task_annotations_to_session();
 
   draw();
   update_points_container();
@@ -840,25 +850,24 @@ function toggle_line_to_vp_visibility(id, type_of_point, type_of_vp){
 
 function delete_point(id, type_of_point) {
   if(type_of_point == 'label'){
-    label_points[state.index][id] = null;
+    points_structures.label_points[state.index][id] = null;
   } else if(type_of_point == 'construction') {
-    construction_points[state.index][id] = null;
+    points_structures.construction_points[state.index][id] = null;
   } else console.log("Impossible to have this option (in the functions of points container)");
   // let's save the change in the session
-  sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
+  save_task_annotations_to_session();
 
   draw();
   update_points_container();
 }
 
 function toggle_keypoint_visibility(id){
-  let visibility = label_points[state.index][id].visibility;
+  let visibility = points_structures.label_points[state.index][id].visibility;
   visibility++;
   if(visibility > 2) visibility = 0;
-  label_points[state.index][id].visibility = visibility;
+  points_structures.label_points[state.index][id].visibility = visibility;
   // let's save the change in the session
-  sessionStorage.setItem('label_points', JSON.stringify(label_points));
+  save_task_annotations_to_session();
   update_points_container();
 }
 
@@ -866,27 +875,27 @@ function toggle_keypoint_visibility(id){
 
 function change_c_line_color(id){
   const local_colors = colors["construction_lines_possibile_colors"];
-  const current = construction_lines[state.index][id].color;
+  const current = points_structures.construction_lines[state.index][id].color;
   const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
-  construction_lines[state.index][id].color = next;
+  points_structures.construction_lines[state.index][id].color = next;
   // let's save the change in the session
-  sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
+  save_task_annotations_to_session();
   draw();
   update_points_container();
 }
 
 function toggle_c_line_visibility(id){
-  construction_lines[state.index][id].hide = !construction_lines[state.index][id].hide;
+  points_structures.construction_lines[state.index][id].hide = !points_structures.construction_lines[state.index][id].hide;
   // let's save the change in the session
-  sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
+  save_task_annotations_to_session();
   draw();
   update_points_container();
 }
 
 function delete_c_line(id){
-  construction_lines[state.index][id] = null;
+  points_structures.construction_lines[state.index][id] = null;
   // let's save the change in the session
-  sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
+  save_task_annotations_to_session();
   draw();
   update_points_container();
 }
@@ -894,18 +903,17 @@ function delete_c_line(id){
 // ------------------------------------
 
 function toggle_bounding_box_visibility(){
-  bounding_boxes[state.index].hide = !bounding_boxes[state.index].hide;
+  points_structures.bounding_boxes[state.index].hide = !points_structures.bounding_boxes[state.index].hide;
   // let's save the change in the session
-  sessionStorage.setItem('bounding_boxes', JSON.stringify(bounding_boxes));
+  save_task_annotations_to_session();
   draw();
   update_points_container();
 }
 
 function delete_bounding_box(){
-  bounding_boxes[state.index] = null;
+  points_structures.bounding_boxes[state.index] = null;
   // let's save the change in the session
-  sessionStorage.setItem('bounding_boxes', JSON.stringify(bounding_boxes));
+  save_task_annotations_to_session();
   draw();
   update_points_container();
 }
-
