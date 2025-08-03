@@ -1,9 +1,12 @@
 import { Line, Point, BoundingBox, ConstructionLine } from "./taskClasses.js";
-import { task_directory, images_directory, state } from "./taskState.js";
+import { task_directory, images_directory, save_task_annotations_url, task_annotations_directory, state } from "./taskState.js";
+import { vanishing_points_x, vanishing_points_y, vanishing_points_z, construction_points, label_points, construction_lines, bounding_boxes } from "./taskMain.js"
 
-// various functions for fetching...
+
+// function the fetch the main data (npoints, images'names list, nimages and images)
 
 export async function fetch_data() {
+  // warning! for data we refer to data.json, that contains npoints e nimages
   const response = await fetch(task_directory + "data.json");
   if (!response.ok) throw new Error("Error during data.json fetch");
   const data = await response.json();
@@ -192,3 +195,135 @@ export function load_points_structure_from_session(key){
 
 }
 
+// ========================================================
+
+// save task annotations functions
+
+export function save_task_annotations(){
+  const annotations = {
+    "vanishing_points_x": vanishing_points_x,
+    "vanishing_points_y": vanishing_points_y,
+    "vanishing_points_z": vanishing_points_z,
+    "construction_points": construction_points,
+    "label_points": label_points,
+    "construction_lines": construction_lines,
+    "bounding_boxes": bounding_boxes,
+  };
+
+  // Invio POST a Flask
+  fetch(save_task_annotations_url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(annotations)
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error("Error in the request");
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log("Server response", data);
+  })
+  .catch(error => {
+    console.error("Error:", error);
+  });
+}
+
+/*
+export async function load_task_annotations() {
+  for(let i = 0; i < state.nimages; i++){
+    const filename = "taskAnnotation_" + i + '.json'
+    const response = await fetch(task_annotations_directory + filename);
+    if (!response.ok) throw new Error("Error during load_task_annotations fetch");
+    const data = await response.json();
+
+    // let's save it in the session
+    console.log("data: ", data);
+    state.npoints = data.npoints;
+    state.nimages = data.nimages;
+
+    
+    sessionStorage.setItem('vanishing_points_x', JSON.stringify(vanishing_points_x));
+    sessionStorage.setItem('vanishing_points_y', JSON.stringify(vanishing_points_y));
+    sessionStorage.setItem('vanishing_points_z', JSON.stringify(vanishing_points_z));
+    sessionStorage.setItem('construction_points', JSON.stringify(construction_points));
+    sessionStorage.setItem('label_points', JSON.stringify(label_points));
+    sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));
+    sessionStorage.setItem('bounding_boxes', JSON.stringify(bounding_boxes));
+    
+
+    sessionStorage.setItem('vanishing_points_x', data.vanishing_points_x);
+    sessionStorage.setItem('vanishing_points_y', data.vanishing_points_y);
+    sessionStorage.setItem('vanishing_points_z', data.vanishing_points_z);
+    sessionStorage.setItem('construction_points', data.construction_points);
+    sessionStorage.setItem('label_points', data.label_points);
+    sessionStorage.setItem('construction_lines', data.construction_lines);
+    sessionStorage.setItem('bounding_boxes', data.bounding_boxes);
+    
+    return null;
+  }
+  
+}
+*/
+
+
+export async function load_task_annotations() {
+
+  let temp_vanishing_points_x = [];
+  let temp_vanishing_points_y = [];
+  let temp_vanishing_points_z = [];
+  let temp_construction_points = [];
+  let temp_label_points = [];
+  let temp_construction_lines = [];
+  let temp_bounding_boxes = [];
+  
+  for (let i = 0; i < state.nimages; i++) {
+    const filename = `taskAnnotation_${i}.json`;
+    const url = task_annotations_directory + filename;
+
+    try {
+      const response = await fetch(url);
+
+      // if file doesn't exist
+      if (response.status === 404) {
+        console.warn(`File not found: ${filename}`);
+        return;
+      } 
+      // other errors
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status} on ${filename}`);
+      }
+      // else we append the data in a temporary structure that we will save later
+      const data = await response.json();
+      console.log("data:", data);
+
+      temp_vanishing_points_x.push(data.vanishing_points_x);
+      temp_vanishing_points_y.push(data.vanishing_points_y);
+      temp_vanishing_points_z.push(data.vanishing_points_z);
+      temp_construction_points.push(data.construction_points);
+      temp_label_points.push(data.label_points);
+      temp_construction_lines.push(data.construction_lines);
+      temp_bounding_boxes.push(data.bounding_boxes);
+
+    } catch (error) {
+      console.error("Error during load_task_annotations fetch", error);
+      return;
+    }
+
+  }
+
+  // let's save these structure in the session
+  // so we use the same mechanism to obtain the points structures
+  sessionStorage.setItem('vanishing_points_x', JSON.stringify(temp_vanishing_points_x));
+  sessionStorage.setItem('vanishing_points_y', JSON.stringify(temp_vanishing_points_y));
+  sessionStorage.setItem('vanishing_points_z', JSON.stringify(temp_vanishing_points_z));
+  sessionStorage.setItem('construction_points', JSON.stringify(temp_construction_points));
+  sessionStorage.setItem('label_points', JSON.stringify(temp_label_points));
+  sessionStorage.setItem('construction_lines', JSON.stringify(temp_construction_lines));
+  sessionStorage.setItem('bounding_boxes', JSON.stringify(temp_bounding_boxes));
+
+  console.log(sessionStorage.getItem('vanishing_points_x'));
+}

@@ -2,6 +2,7 @@ import { ucanvas, state, colors } from "./taskState.js";
 import { draw } from "./taskImageRenderer.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, is_image_clicked } from "./taskUtils.js";
 import {construction_points, label_points, construction_lines} from "./taskMain.js"
+import { save_task_annotations } from "./taskDataLoader.js";
 
 
 // BEFORE DELETING THE TASK SERVER SIDE WE HAVE TO DELETE THE BROWSER SESSION
@@ -266,4 +267,15 @@ ucanvas.addEventListener("wheel", function (e) {
   state.image_y = cursur_y_canvas - (cursur_y_image * state.image_scale);
 
   draw();
+});
+
+// ========================================================
+
+// SAVE ANNOTATIONS
+
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault(); // prevent the automatic behaviour of the page
+    save_task_annotations();
+  }
 });

@@ -33,6 +33,10 @@ export const icons_directories = {"artist-palette": icons_directory + 'artist-pa
                                   "eye-hidden-y": icons_directory + 'eye-hidden-y.svg', 
                                   "eye-z": icons_directory + 'eye-z.svg', 
                                   "eye-hidden-z": icons_directory + 'eye-hidden-z.svg'};
+export const save_task_annotations_url = '/save-task-annotations';
+export const annotations_directory = task_directory + 'Annotations/';
+export const task_annotations_directory = annotations_directory + 'TaskAnnotations/'
+
 
 
 export const state = {

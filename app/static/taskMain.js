@@ -1,6 +1,6 @@
 import { counter, message_element, ucanvas, state, colors, icons_directories } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
-import { fetch_data, fetch_image_list, fetch_image, load_points_structure_from_session } from "./taskDataLoader.js";
+import { fetch_data, fetch_image_list, fetch_image, load_points_structure_from_session, load_task_annotations } from "./taskDataLoader.js";
 import { wait_for_click_or_escape, wait_for_enter_or_escape, handle_mouse_highlight_enter, handle_mouse_highlight_leave } from "./taskEvents.js";
 import { BoundingBox, ConstructionLine, Line, Point } from "./taskClasses.js";
 import { page_pos_to_canvas_pos, canvas_pos_to_image_pos, vector_diff, is_image_clicked, vector_normalize } from "./taskUtils.js";
@@ -36,6 +36,8 @@ async function main() {
 
     // let's update the counter of images
     counter.textContent = `${state.index + 1} / ${state.nimages}`;
+
+    await load_task_annotations();
 
     // at this point we know nimages and npoints (we know the dimensions fot these structures)
     initialize_points_structures();
@@ -770,13 +772,11 @@ function change_point_color(id, type_of_point) {
     const local_colors = colors["label_points_possibile_colors"];
     const current = label_points[state.index][id].color;
     const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
-    label_points[state.index][id].old_color = next;
     label_points[state.index][id].color = next;
   } else if(type_of_point == 'construction') {
     const local_colors = colors["construction_points_possibile_colors"];
     const current = construction_points[state.index][id].color;
     const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
-    construction_points[state.index][id].old_color = next;
     construction_points[state.index][id].color = next;
   } else console.log("Impossible to have this option (in the functions of points container)");
   // let's save the change in the session
@@ -868,7 +868,6 @@ function change_c_line_color(id){
   const local_colors = colors["construction_lines_possibile_colors"];
   const current = construction_lines[state.index][id].color;
   const next = local_colors[(local_colors.indexOf(current) + 1) % local_colors.length];
-  construction_lines[state.index][id].old_color = next;
   construction_lines[state.index][id].color = next;
   // let's save the change in the session
   sessionStorage.setItem('construction_lines', JSON.stringify(construction_lines));

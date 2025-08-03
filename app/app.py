@@ -7,7 +7,21 @@ import json
 
 
 app = Flask(__name__, template_folder='templates')
+
+
+# =============================================================================
+# directories
+
 task_directory = os.path.join('app', 'Task')
+
+images_directory = os.path.join(task_directory, 'Images')
+
+annotations_directory = os.path.join(task_directory, 'Annotations')
+# TaskAnnotations contains all the annotations during the work of a task (vanishing points, construction point and lines et cetera...)
+task_annotations_directory = os.path.join(annotations_directory, 'TaskAnnotations')
+# LabelAnnotations contains the actual annotations for computer vision model (label point and bounding boxes)
+label_annotations_directory = os.path.join(annotations_directory, 'LabelAnnotations')
+
 
 # =============================================================================
 
@@ -23,8 +37,8 @@ def guide():
 def task():
     if request.method == 'POST':
 
-        npunti = request.form['npoints']
-        immagini = request.files.getlist('images[]')
+        npoints = request.form['npoints']
+        images = request.files.getlist('images[]')
 
         # creates the Task folder
         if not os.path.exists(task_directory):
@@ -32,19 +46,18 @@ def task():
 
         # saves the number of points and images in data.json in the Task folder
         data = {
-            "npoints": int(npunti),
-            "nimages": len(immagini)
+            "npoints": int(npoints),
+            "nimages": len(images)
         }
         with open(os.path.join(task_directory, 'data.json'), 'w') as f:
             json.dump(data, f, indent=4)
 
         # creates the Images folder inside Task folder
-        images_directory = os.path.join(task_directory, 'Images')
         os.makedirs(images_directory)
 
         # saves all of the images in the Images folder and prepares the list of the names of the images
         images_filenames = []
-        for img in immagini:
+        for img in images:
             if img and img.filename:
                 filename = secure_filename(img.filename)
                 filepath = os.path.join(images_directory, filename)
@@ -55,12 +68,17 @@ def task():
         with open(os.path.join(task_directory, 'images.json'), 'w') as f:
             json.dump(images_filenames, f)
 
+        # create the Annotations folder inside Task folder
+        os.makedirs(annotations_directory)
+        # inside Annotations there are the 2 folders TaskAnnotations and LabelAnnotaions
+        os.makedirs(task_annotations_directory)
+        os.makedirs(label_annotations_directory)
+
         return redirect(url_for('task'))
     else:
         # based on the existance of the Task folder Task.html has 2 different behaviours
         # it can allow to create a task (if the Task folder doesn't exist)
         # or it can allow to work on the task (if the Task folder exists)
-
         task_created = os.path.exists(task_directory)
 
         if task_created:
@@ -68,7 +86,7 @@ def task():
                 data = json.load(f)
             nimages = int(data.get('nimages'))
         else:
-            nimages = 0
+            nimages = 0  # but it's not really important this value if the task is not created
 
         return render_template('task.html', task_created=task_created, nimages=nimages)
 
@@ -87,6 +105,43 @@ def serve_task_file(filename):
         abort(404)
 
     return send_from_directory(task_folder, filename)
+
+
+@app.route('/save-task-annotations', methods=['POST'])
+def save_task_annotations():
+
+    annotations = request.get_json()
+
+    vanishing_points_x = annotations.get("vanishing_points_x")
+    vanishing_points_y = annotations.get("vanishing_points_y")
+    vanishing_points_z = annotations.get("vanishing_points_z")
+    construction_points = annotations.get("construction_points")
+    label_points = annotations.get("label_points")
+    construction_lines = annotations.get("construction_lines")
+    bounding_boxes = annotations.get("bounding_boxes")
+
+    # we might check if those are good annotations
+    # but we are local, so it doens't matter
+    
+    # we simply save the annotations in TaskAnnotations
+    nimages = len(annotations.get("vanishing_points_x"))
+    for i in range(nimages):
+        filename = 'taskAnnotation_' + str(i) + '.json'
+        data = {
+            "vanishing_points_x": vanishing_points_x[i],
+            "vanishing_points_y": vanishing_points_y[i],
+            "vanishing_points_z": vanishing_points_z[i],
+            "construction_points": construction_points[i],
+            "label_points": label_points[i],
+            "construction_lines": construction_lines[i],
+            "bounding_boxes": bounding_boxes[i],
+        }
+        with open(os.path.join(task_annotations_directory, filename), 'w') as f:
+            json.dump(data, f, indent=4)
+
+    
+    return {"response": "ok"}
+
 
 @app.route('/export-task')
 def export_task():
