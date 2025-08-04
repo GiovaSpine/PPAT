@@ -2,6 +2,7 @@ console.log("Testing task_script.js");
 
 // the counter of images (exxample: 1/48)
 export const counter = document.getElementById("counter");
+export const image_name = document.getElementById("image_name");
 
 // we have the lower and upper canvas
 // the upper canvas contains the points
@@ -10,10 +11,14 @@ export const lcanvas = document.getElementById("lower_canvas");
 export const lctx = lcanvas.getContext("2d");
 export const ucanvas = document.getElementById("upper_canvas");
 export const uctx = ucanvas.getContext("2d");
-lcanvas.width = 1200;
-lcanvas.height = 780;
-ucanvas.width = 1200;
-ucanvas.height = 780;
+
+function set_canvas_size(canvas){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
+set_canvas_size(lcanvas);
+set_canvas_size(ucanvas);
 
 
 // the message element where we write the various messages for the user

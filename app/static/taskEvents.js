@@ -170,7 +170,7 @@ export function handle_mouse_highlight_leave(event) {
 
 ucanvas.addEventListener("click", function(e){
   // function to test the click of the image
-  const print = false;
+  const print = true;
 
   if(print){
     const x = e.pageX;

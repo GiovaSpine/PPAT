@@ -18,50 +18,90 @@
     margin-left: 4px;
 }
 
+#counter {
+    display: inline-block;
+    width: 9ch;
+    text-align: center;
+}
+
+#image_name {
+    border: 1px solid #ccc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 25ch;
+    height: 24px;
+    line-height: 1;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 /* ======================================================== */
 
 /* MAIN LAYOUT */
+
+html, body, main {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* variuos measurements: */
+/* the reference are based on 1920 x 1080 resolution (1080p) */
+/* gap between elements in main_layout is 30 px when 1080p */
+/* main_layout is wide 1896px and tall 780px when 1080p */
+/* left panel and points_container are wide 300px when 1080p */
+/* canvas is wide 1200px when 1080p */
 
 .main_layout {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    gap: 30px;
+    gap: calc((30 / 1920) * 100%);
     position: relative;
+    width: calc((1896 / 1920) * 100%);
+    aspect-ratio: 1896 / 780;
+    margin: 0 auto;  /* to center on width */
 }
 
 .left_panel {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    width: 300px;
+    width: calc((300 / 1920) * 100%);
 }
 
 .work_button {
     height: 40px;
-    width: 300px;
+    width: 100%;
 }
 
 .message_container {
+    box-sizing: border-box;  /* so that padding and border do not increase width and height */
     border: 1px solid #ccc;
-    width: 290px;  /* because there is the border and padding 300 - 2 - 8 */ 
-    height: 90px;  /* because there is the border and padding 100 - 2 - 8 */
+    width: 100%;
+    height: 90px;
     padding: 4px;
     overflow-y: auto;
 }
 
+#message {
+    font-size: 14px;
+}
+
 #canvas_wrapper {
     position: relative;
-    width: 1200px;
-    height: 780px;
+    width: calc((1200 / 1920) * 100%);
+    height: 100%;
 }
 
 #lower_canvas, #upper_canvas {
     position: absolute;
     top: 0;
     left: 0;
-    width: 1200px;
-    height: 780px;
+    width: 100%;
+    height: 100%;
 }
 
 #lower_canvas {
@@ -73,17 +113,10 @@
 }
 
 #points_container {
+    box-sizing: border-box;  /* so that padding and border do not increase width and height */
     border: 1px solid #ccc;
-    width: 278px;
-    height: 758px;
-    padding: 10px;
-    overflow-y: auto;
-}
-
-#points_container {
-    border: 1px solid #ccc;
-    width: 278px;  /* because there is the border and padding 300 - 2 - 20*/
-    height: 758px;  /* because there is the border and padding 780 - 2 - 20*/
+    width: calc((300 / 1920) * 100%);
+    height: 100%;
     padding: 10px;
     overflow-y: auto;
 }

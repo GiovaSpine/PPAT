@@ -1,4 +1,4 @@
-import { counter, message_element, ucanvas, state, colors, icons_directories } from "./taskState.js";
+import { counter, message_element, ucanvas, state, colors, icons_directories, image_name } from "./taskState.js";
 import { draw, initial_position_and_scale } from "./taskImageRenderer.js";
 import { fetch_data, fetch_image_list, fetch_image, save_task_annotations_to_session, load_task_annotations_from_session, load_task_annotations_from_server} from "./taskDataLoader.js";
 import { wait_for_click_or_escape, wait_for_enter_or_escape, handle_mouse_highlight_enter, handle_mouse_highlight_leave } from "./taskEvents.js";
@@ -34,8 +34,9 @@ async function main() {
     await fetch_image_list();
     state.image = await fetch_image(state.index);
 
-    // let's update the counter of images
+    // let's update the counter of images and image name
     counter.textContent = `${state.index + 1} / ${state.nimages}`;
+    image_name.textContent = show_image_name();
 
     // at this point we know nimages and npoints (we know the dimensions fot these structures)
     initialize_points_structures();
@@ -62,6 +63,34 @@ main();
 
 // ========================================================
 
+function show_image_name(){
+  // the name of the image can be really long
+  // se we show max 25 char
+  // WARNING THIS IS CONNECTED TO CSS
+  const max_length = 25;
+
+  const full_name = state.image_list[state.index];
+
+  if(full_name.length <= max_length){
+    return full_name
+  } else {
+    const dot_index = full_name.lastIndexOf(".");  // the index of dot in the image name
+    const ext = full_name.slice(dot_index); // extension including dot, for example ".png"
+    const base_name = full_name.slice(0, dot_index);  // name without extesions
+    const remaining = max_length - ext.length - 3; // space for leading chars + "..." + extension
+
+    if (remaining <= 0) {
+      // not enough space for leading characters (though it can happen only if the extension is very big)
+      return "⋯" + ext;
+    }
+
+    const visible_start = base_name.slice(0, remaining);
+    return visible_start + "⋯" + ext;
+  }
+
+}
+
+
 
 async function next_image() {
   state.index++;
@@ -80,8 +109,9 @@ async function next_image() {
 
   draw();
 
-  // let's update the counter of images
+  // let's update the counter of images and image name
   counter.textContent = `${state.index + 1} / ${state.nimages}`;
+  image_name.textContent = show_image_name();
   // let's reset the message
   message_element.textContent = "";
 }
@@ -104,8 +134,9 @@ async function prev_image() {
 
   draw();
 
-  // let's update the counter of images
+  // let's update the counter of images and image name
   counter.textContent = `${state.index + 1} / ${state.nimages}`;
+  image_name.textContent = show_image_name();
   // let's reset the message
   message_element.textContent = "";
 }
